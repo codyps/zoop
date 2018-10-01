@@ -67,8 +67,8 @@ struct TypeSpec {
     include_bookmark: bool,
 }
 
-impl From<TypeSpec> for String {
-    fn from(t: TypeSpec) -> Self {
+impl<'a> From<&'a TypeSpec> for String {
+    fn from(t: &'a TypeSpec) -> Self {
         let mut v = vec![];
         if t.include_fs {
             v.push("filesystem")
@@ -101,46 +101,51 @@ impl Default for ListRecurse {
 }
 
 /// Note: no support for sorting, folks can do that in rust if they really want it.
-#[derive(Debug,Default,PartialEq,Eq,Clone)]
-pub struct ListBuilder {
+#[derive(Debug,PartialEq,Eq,Clone)]
+pub struct ListBuilder<'a> {
+    parent: &'a Zfs,
     recursive: ListRecurse,
     dataset_types: Option<TypeSpec>,
 }
 
-impl ListBuilder {
-    pub fn depth(&mut self, levels: usize) -> Self {
+impl<'a> ListBuilder<'a> {
+    pub fn depth(&mut self, levels: usize) -> &mut Self {
         self.recursive = ListRecurse::Depth(levels);
-        self.clone()
+        self
     }
 
-    pub fn recursive(&mut self) -> Self {
+    pub fn recursive(&mut self) -> &mut Self {
         self.recursive = ListRecurse::Yes;
-        self.clone()
+        self
     }
 
-    pub fn include_filesystems(&mut self) -> Self {
+    pub fn include_filesystems(&mut self) -> &mut Self {
         self.dataset_types.get_or_insert(TypeSpec::default()).include_fs = true;
-        self.clone()
+        self
     }
 
-    pub fn include_snapshots(&mut self) -> Self {
+    pub fn include_snapshots(&mut self) -> &mut Self {
         self.dataset_types.get_or_insert(TypeSpec::default()).include_snap = true;
-        self.clone()
+        self
     }
 
-    pub fn include_bookmarks(&mut self) -> Self {
+    pub fn include_bookmarks(&mut self) -> &mut Self {
         self.dataset_types.get_or_insert(TypeSpec::default()).include_bookmark = true;
-        self.clone()
+        self
     }
 
-    pub fn include_volumes(&mut self) -> Self {
+    pub fn include_volumes(&mut self) -> &mut Self {
         self.dataset_types.get_or_insert(TypeSpec::default()).include_vol = true;
-        self.clone()
+        self
+    }
+
+    pub fn query(&self) -> Result<ZfsList, ZfsError> {
+        self.parent.list_from_builder(self)
     }
 }
 
 impl Zfs {
-    pub fn list_from_builder(&self, builder: ListBuilder) -> Result<ZfsList, ZfsError>
+    fn list_from_builder(&self, builder: &ListBuilder) -> Result<ZfsList, ZfsError>
     {
         // zfs list -H
         // '-s <prop>' sort by property (multiple allowed)
@@ -153,7 +158,11 @@ impl Zfs {
             // +parsable, +scripting mode
             .arg("-pH")
             // only name
-            .arg("-o").arg("name");
+            .arg("-o").arg("name")
+            // sorting by name is faster.
+            // TODO: find out why
+            .arg("-s").arg("name")
+            ;
 
         match builder.recursive {
             ListRecurse::No => {},
@@ -165,12 +174,12 @@ impl Zfs {
             }
         }
 
-        match builder.dataset_types {
-            None => {
+        match &builder.dataset_types {
+            &None => {
                 // TODO: should we require this?
             },
-            Some(v) => {
-                cmd.arg(String::from(v));
+            &Some(ref v) => {
+                cmd.arg("-t").arg(String::from(v));
             }
         }
 
@@ -188,37 +197,17 @@ impl Zfs {
         Ok(ZfsList { out: output.stdout })
     }
 
-
-    fn list_with_args(&self, args: &[&str]) -> Result<ZfsList, ZfsError>
+    pub fn list_basic(&self) -> Result<ZfsList, ZfsError>
     {
-        // zfs list -H
-        // '-s <prop>' sort by property (multiple allowed)
-        // '-d <depth>' recurse to depth
-        // '-r' 
-        let output = process::Command::new(&self.zfs_cmd)
-            .arg("list")
-            // +parsable, +scripting mode
-            .arg("-pH")
-            // only name
-            .arg("-o").arg("name")
-            .args(args)
-            .output().map_err(|e| ZfsError::Exec{ io: e})?;
-
-        if !output.status.success() {
-            println!("status: {}", output.status);
-            return Err(ZfsError::Process { status: output.status });
-        }
-
-        if output.stderr.len() > 0 {
-            println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
-        }
-
-        Ok(ZfsList { out: output.stdout })
+        self.list().query()
     }
 
-    pub fn list(&self) -> Result<ZfsList, ZfsError>
-    {
-        self.list_with_args(&[])
+    pub fn list(&self) -> ListBuilder {
+        ListBuilder {
+            parent: self,
+            dataset_types: Default::default(),
+            recursive: Default::default(),
+        }
     }
 
     // delete

@@ -55,7 +55,7 @@ fn main() {
         let dest_zfs = Zfs::default();
 
 
-        for i in src_zfs.list() {
+        for i in src_zfs.list().include_bookmarks().include_snapshots().query() {
             println!("item: {}", i);
         }
 
