@@ -10,3 +10,4 @@ documentation = "https://docs.rs/zoop"
 
 [dependencies]
 clap = "*"
+zfs-cmd-api = { path = "zfs-cmd-api", version = "*" }

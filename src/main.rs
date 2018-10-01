@@ -2,6 +2,9 @@
 #[macro_use]
 extern crate clap;
 
+extern crate zfs_cmd_api;
+
+use zfs_cmd_api::Zfs;
 use clap::{Arg,SubCommand,AppSettings};
 
 // hack to try to get `app_from_crate!()` to regenerate.
@@ -46,6 +49,26 @@ fn main() {
 
         println!("copy from {} to {} (recursive={})", src_dataset, dest_dataset, recursive);
         println!("dry_run: {}", dry_run);
+
+
+        let src_zfs = Zfs::default();
+        let dest_zfs = Zfs::default();
+
+
+        for i in src_zfs.list() {
+            println!("item: {}", i);
+        }
+
+        // XXX: bookmarks on the SRC allow deletion of snapshots while still keeping send
+        // efficiency. As a result, we should create bookmarks to identify points we'll want to
+        // sync from
+        //
+        // XXX: the createtxg property allows ordering by creation for incremental send/recv
+        // (bookmarks are basically a named createtxg). We may need to use the createtxg in out
+        // common-base-selection
+        //
+        // XXX: datasets have guids that persist across send/recv. Use this to identify common
+        // elements. guids identify snapshots across pools.
 
         // for dataset, find the common base snapshot
         // for each snapshot after the common base
