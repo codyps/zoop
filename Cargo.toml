@@ -11,3 +11,7 @@ documentation = "https://docs.rs/zoop"
 [dependencies]
 clap = "*"
 zfs-cmd-api = { path = "zfs-cmd-api", version = "*" }
+fmt-extra = "*"
+
+[profile.release]
+debug = true

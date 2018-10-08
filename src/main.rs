@@ -3,9 +3,11 @@
 extern crate clap;
 
 extern crate zfs_cmd_api;
+extern crate fmt_extra;
 
 use zfs_cmd_api::Zfs;
 use clap::{Arg,SubCommand,AppSettings};
+use std::collections::BTreeMap;
 
 // hack to try to get `app_from_crate!()` to regenerate.
 #[allow(dead_code)]
@@ -50,14 +52,43 @@ fn main() {
         println!("copy from {} to {} (recursive={})", src_dataset, dest_dataset, recursive);
         println!("dry_run: {}", dry_run);
 
+        let src_zfs = Zfs::from_env_prefix("SRC");
+        let dest_zfs = Zfs::from_env_prefix("DEST");
 
-        let src_zfs = Zfs::default();
-        let dest_zfs = Zfs::default();
+        let mut list_builder = zfs_cmd_api::ListBuilder::default();
+        list_builder.include_bookmarks().include_snapshots()
+            .depth(1)
+            .with_elements(vec!["createtxg", "name"]);
+
+        let src_list = src_zfs.list_from_builder(list_builder.clone().with_dataset(src_dataset))
+            .expect("src list failed");
+        let dst_list = dest_zfs.list_from_builder(list_builder.clone().with_dataset(dest_dataset))
+            .expect("dst list failed");
 
 
-        for i in src_zfs.list().include_bookmarks().include_snapshots().query() {
-            println!("item: {}", i);
+        fn to_createtxg_set(list_vecs: Vec<Vec<String>>) -> BTreeMap<String, (String, )>
+        {
+            let mut list_map: BTreeMap<String, (String,)> = BTreeMap::default();
+
+            for mut e in list_vecs.into_iter() {
+                let createtxg = e.pop().unwrap();
+                let name = e.pop().unwrap();
+                match list_map.insert(createtxg.clone(), (name.clone(),)) {
+                    Some(x) => println!("duplicate createtxg: {} {} {}", createtxg, name, x.0),
+                    None => {}
+                }
+            }
+
+            list_map
         }
+
+        let src_map = to_createtxg_set(From::from(&src_list));
+        let dst_map = to_createtxg_set(From::from(&dst_list));
+
+        // Find the most recent createtxg (highest number?) in common between the two
+        // Find all snapshots in src with createtxgs after the common createtxg
+        // Send the found snapshots in order. (`send -I`? may not work with bookmarks).
+        // XXX: consider if we should or can also send bookmarks.
 
         // XXX: bookmarks on the SRC allow deletion of snapshots while still keeping send
         // efficiency. As a result, we should create bookmarks to identify points we'll want to
