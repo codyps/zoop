@@ -82,8 +82,28 @@ fn main() {
             list_map
         }
 
+        // TODO: determine if dataset has a partial receive, and resume it before proceeding with
+        // normal incrimental send
+
         let src_map = to_createtxg_set(From::from(&src_list));
         let dst_map = to_createtxg_set(From::from(&dst_list));
+
+        // generate a graph of
+        //      [dst-createtxg|src-createtxg] ->* src-createtxg
+        // in other words:
+        //  - each dst-createtxg serves as a _basis_ for 1 or more src-createtxgs
+        //  - src-createtxgs may in turn be the basis for other src-createtxgs
+        //  - we select a basis (parent) for each src-createtxg by finding the lowest createtxg
+        //    that preceeds it
+        //  - if a dst-createtxg exists which matches a src-createtxg, the src-createtxg is ignored
+        //  - 
+        let mut src_iter = src_map.iter();
+        let mut dst_iter = dst_map.iter();
+        loop {
+
+
+        }
+
 
         // Find the most recent createtxg (highest number?) in common between the two
         // Find all snapshots in src with createtxgs after the common createtxg

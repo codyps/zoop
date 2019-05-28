@@ -24,9 +24,47 @@ Manage zfs snapshot transfer
     - `list -Hr -o name -S creation -t snapshot`
     - `list -t filesystem,volume -Hr -o name`
   - no bookmark handling at all (only works with snapshots)
+ - zrep
 
 # Various references related to zfs bookmarks & send
 
  - http://open-zfs.org/wiki/Documentation/ZfsSend
  - https://www.reddit.com/r/zfs/comments/5op68q/can_anyone_here_explain_zfs_bookmarks/
  - https://utcc.utoronto.ca/~cks/space/blog/solaris/ZFSBookmarksWhatFor
+
+
+# Snapshot Name Styles
+
+ - zfs-auto-snapshot vanilla
+  - <prefix>_<label>_YYYY-MM-DD-HHmm
+   - `<prefix>` is typically `zfs-auto-snap`
+   - `<label>` is typically one of `frequent`, `hourly`,
+      `daily`, `monthly`, `weekly`.
+ - zfs-auto-snapshot sort-mod
+  - <prefix>_YYYY-MM-DD-HHmm_<label>
+   - `<prefix>` is typically `znap`
+   - `<label>` is typically one of `frequent`, `hourly`,
+		  `daily`, `monthly`, `weekly`.
+
+# Snapshot Policy
+
+ - zfs-auto-snapshot
+  - count per category
+   - frequent (15m): 4
+   - hourly: 24
+   - daily: 31
+   - weekly: 8
+   - monthly: 12
+ - Mac Timemachine
+  - creation
+   - unspecified number/rate of "local" snapshots
+   - hourly: 24
+   - daily: 31
+   - weekly: as many as space permits
+  - deletion
+   - oldest first
+ - snapper
+  - time based
+  - boot based
+  - before/after
+   
