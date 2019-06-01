@@ -1,0 +1,47 @@
+#! /bin/bash
+set -euf -o pipefail
+
+tmpdir=
+zpool1="zoop-test-$RANDOM"
+zpool2="zoop-test-$RANDOM"
+
+cleanup() {
+	if ! [ -n "$tmpdir" ]; then
+		return
+	fi
+
+	if [ -n "$zpool1" ]; then
+		zpool destroy "$zpool1" || true
+	fi
+
+	if [ -n "$zpool2" ]; then
+		zpool destroy "$zpool2" || true
+	fi
+
+	rm -rf "$tmpdir"
+}
+trap cleanup EXIT
+
+tmpdir=$(mktemp -d --tmpdir zoop.XXXXXXXX)
+
+truncate --size 1G "$tmpdir/zdev1.img"
+truncate --size 1G "$tmpdir/zdev2.img"
+
+pool_suffix="$RANDOM"
+new_pool() {
+	name="zoop-test-$pool_suffix-$1"
+	zpool create "$name" "$2"
+	echo "$name"
+}
+
+zpool1="$(new_pool "1" "$tmpdir/zdev1.img")"
+zpool2="$(new_pool "2" "$tmpdir/zdev2.img")"
+
+zfs snapshot "${zpool1}@snap-1"
+zfs bookmark "${zpool1}@snap-1" "${zpool1}#snap-1"
+
+zfs create "${zpool2}/sub"
+zfs send "${zpool1}@snap-1" | zfs recv -F "${zpool2}/sub"
+
+zfs get all "${zpool1}@snap-1" >zpool1_snap1.prop
+zfs get all "${zpool2}/sub@snap-1" >zpool2_sub_snap1.prop
