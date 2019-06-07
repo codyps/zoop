@@ -214,13 +214,19 @@ impl<'a> DerefMut for ListExecutor<'a> {
 }
 
 impl Zfs {
+
+    fn cmd(&self) -> process::Command
+    {
+        process::Command::new(&self.zfs_cmd)
+    }
+
     pub fn list_from_builder(&self, builder: &ListBuilder) -> Result<ZfsList, ZfsError>
     {
         // zfs list -H
         // '-s <prop>' sort by property (multiple allowed)
         // '-d <depth>' recurse to depth
         // '-r' 
-        let mut cmd = process::Command::new(&self.zfs_cmd);
+        let mut cmd = self.cmd();
 
         cmd
             .arg("list")
@@ -326,7 +332,78 @@ impl Zfs {
             zfs_cmd: From::from(env),
         }
     }
+
+    /// Resume sending a stream using `receive_resume_token` from the destination filesystem
+    ///
+    /// flags here is constrained to `[Penv]`
+    pub fn send_resume(&self, receive_resume_token: String, flags: SendFlags) -> ZfsSend
+    {
+
+    }
+
+    pub fn send(&self, snapname: String, from: Option<String>, flags: SendFlags) -> ZfsSend
+    {
+
+    }
 }
+
+bitflags! {
+    struct SendFlags: u16 {
+        // these correspond to the lzc SendFlags
+        const EmbedData  = 1<<0;
+        const LargeBlock = 1<<1;
+        const Compress   = 1<<2;
+        const Raw        = 1<<3;
+
+
+        // these are additional items corresponding to `zfs send` cmd flags
+        /// -D
+        const Dedup  = 1<<4;
+        /// -I
+        const IncludeIntermediary = 1<<5;
+        /// -h
+        const IncludeHolds = 1<<6;
+        /// -p
+        const IncludeProps = 1<<6;
+        /// -v
+        const Verbose = 1<<8;
+        /// -n
+        const DryRun = 1<<9;
+        /// -P
+        const Parsable = 1<<10;
+    }
+}
+
+// 
+// send -t <token>
+//  resume send
+// send -D
+//  dedup. depricated
+// send -I <snapshot>
+//  send all intermediary snapshots from <snapshot>
+// send -L
+//  large block
+// send -P
+//  print machine parsable info
+// send -R
+//  replicate (send filesystem and all decendent filesystems up to the named snapshot)
+// send -e
+//  embed (generate a more compact stream)
+// send -c
+//  compress
+// send -w
+//  raw
+// send -h
+//  holds included
+// send -n
+//  dry run
+// send -p
+//  props -- include dataset props in stream
+// send -v
+//  verbose
+// send -i <snapshot>
+//  generate stream from the first <snapshot> [src] to the second <snapshot> [target]
+// 
 
 impl Default for Zfs {
     fn default() -> Self {
