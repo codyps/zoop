@@ -340,10 +340,12 @@ fn main() {
                     // NEED send|recv (pipe) API in zfs-cmd-api
                     let mut send_flags = zfs_cmd_api::SendFlags::LargeBlock
                         | zfs_cmd_api::SendFlags::EmbedData;
-                    let mut recv_flags = BitFlags::default() | zfs_cmd_api::RecvFlags::Force;
+                    let mut recv_flags = zfs_cmd_api::RecvFlags::Resumable
+                        | zfs_cmd_api::RecvFlags::Force;
 
                     if dry_run {
-                        // XXX: consider performing a send dry run (optionally) instead.
+                        // XXX: consider performing a send dry run (optionally) instead, omitting
+                        // the recv altogether.
                         recv_flags |= zfs_cmd_api::RecvFlags::DryRun;
                     }
                     if verbose {
