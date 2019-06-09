@@ -143,6 +143,211 @@ impl<T> Iterator for DrainBTreeMap<T> {
 }
 */
 
+fn zcopy_one(dry_run: bool, verbose: bool, src_dataset: &str, dest_dataset: &str)
+{
+    let src_zfs = Zfs::from_env_prefix("SRC");
+    let dest_zfs = Zfs::from_env_prefix("DEST");
+
+    let mut list_builder = zfs_cmd_api::ListBuilder::default();
+    list_builder.include_snapshots()
+        .depth(1)
+        .with_elements(vec!["createtxg", "name", "guid", "type"]);
+
+    // - dest will contain some or none of snapshots/bookmarks in source
+    // - dest may have previously recieved but later deleted some snapshots
+    // - src may have previously sent but later deleted some snapshots. Some of these may be
+    //   preserved as bookmarks.
+    //
+    // for each snapshot in source, we want to send it to dest
+    // 
+    // simple algorithm:
+    //   - generate 2 ordered lists of snapshots (excluding bookmarks). order using createtxg
+    //   - use guids to merge the 2 lists into a single list, with 3 markers:
+    //     - in both, only in src, only in dest
+    //   - iterate through the merged list, generating a `send` for each pair of elements,
+    //     excluding those pairs where the second pair exists in both src & dest
+    //
+    // Problems:
+    //  - need to transfer and manage entire list of snapshots. Will this grow too large?
+
+
+    // NOTE: we only get bookmarks for `src` because they aren't useful on the dst
+    //
+    // XXX: we could optimize the zfs-cmd-to-zoop datapassing by not asking for "type" in
+    // dst_list, but it's easier to include it.
+    let src_list =
+        src_zfs.list_from_builder(list_builder.clone().include_bookmarks().with_dataset(src_dataset))
+        .expect("src list failed");
+    let dst_list = dest_zfs.list_from_builder(list_builder.clone().with_dataset(dest_dataset))
+        .expect("dst list failed");
+
+
+    fn to_datasets(list_vecs: Vec<Vec<String>>) ->
+        Vec<Dataset>
+    {
+        let mut dss = Vec::with_capacity(list_vecs.len());
+
+        for mut e in list_vecs.into_iter() {
+            let mut e = e.drain(..);
+            let createtxg = e.next().unwrap();
+            let name = e.next().unwrap();
+            let guid = e.next().unwrap();
+            let type_= e.next().unwrap();
+
+            let ds = Dataset {
+                guid: Guid::from(guid.clone()),
+                ds: SubDataset {
+                    type_: DatasetType::try_from(&type_[..]).unwrap_or_else(|v| {
+                        eprintln!("zfs entry: {:?} {:?} {:?} {:?}",
+                                  createtxg, name, guid, type_);
+
+                        panic!("{:?}", v);
+                    }),
+                    name: name.to_owned(),
+                    createtxg: CreateTxg::from(createtxg),
+                }
+            };
+
+            dss.push(ds)
+        }
+
+        dss
+    }
+
+
+    // TODO: determine if dataset has a partial receive, and resume it before proceeding with
+    // normal incrimental send
+
+    let src_dss = to_datasets(From::from(&src_list));
+    let dst_dss = to_datasets(From::from(&dst_list));
+
+
+    let mut dst_guid_map: BTreeMap<Guid, Dataset> = BTreeMap::default();
+    dst_guid_map.extend(dst_dss.into_iter().map(|v| (v.guid.clone(), v)));
+
+
+    let mut merged_dss: BTreeMap<(CreateTxg, Guid), GlobalDataset> = BTreeMap::default();
+
+    // datasets have guids that persist across send/recv. Use this to identify common
+    // elements. guids identify snapshots across pools.
+    // merge sets by guid
+    //
+    // note that bookmarks have a guid equal to the snapshot they were created from
+    //
+    // for the purposes of syncing src to dst, dst datasets that don't exist in any form on src
+    // are irrelevent, so we discard them (they are the items remaining in dst_dss)
+    // 
+    // merged_dss is ordered by (createtxg, guid). We really just want createtxg. Using the
+    // guid lets us avoid having a multimap (a single createtxg may have multiple snaps).
+    //
+    //  XXX: consider the case where multiple snaps exist in the same createtxg. Is it useful
+    //  to have further ordering? Should we include the timestamp here?
+    for src_ds in src_dss.into_iter() {
+        let dst = dst_guid_map.remove(&src_ds.guid).map(|x| x.ds);
+        let k = (src_ds.ds.createtxg.clone(), src_ds.guid.clone());
+        match merged_dss.insert(k,
+                GlobalDataset {
+                    guid: src_ds.guid,
+                    src: src_ds.ds,
+                    dst: dst,
+                }
+            ){
+            Some(x) => {
+                // continue in a duplicate key case, but warn. This should never happen due to
+                // our use of the guid as a piece of the key.
+                eprintln!("WARNING: duplicate key: {:?}", x)
+            },
+            None => {},
+        }
+    }
+
+    // iterate over merged_dss
+    //  - send incrimental for each GlobalDataset where `dst` is None and the src type is not a
+    //    bookmark
+    //
+    //  - Use the previous GlobalDataset as the basis for the incremental send
+
+    
+    let mut prev_dst_ds: Option<String> = None;
+    for (_, ds) in merged_dss.into_iter() {
+        if verbose {
+            eprintln!("examine: {:?}", ds);
+        }
+
+        match &ds.dst {
+            None => {
+                if ds.src.type_ == DatasetType::Bookmark {
+                    // bookmarks can't be sent, they can only be used as the basis for an
+                    // incirmental send. skip.
+                    continue;
+                }
+
+                // send it
+                //
+                // NEED send|recv (pipe) API in zfs-cmd-api
+                let mut send_flags = zfs_cmd_api::SendFlags::LargeBlock
+                    | zfs_cmd_api::SendFlags::EmbedData
+                    | zfs_cmd_api::SendFlags::Compressed;
+                let mut recv_flags = zfs_cmd_api::RecvFlags::Resumeable
+                    | zfs_cmd_api::RecvFlags::Force;
+
+                if dry_run {
+                    // XXX: consider performing a send dry run (optionally) instead, omitting
+                    // the recv altogether.
+                    recv_flags |= zfs_cmd_api::RecvFlags::DryRun;
+                }
+                if verbose {
+                    recv_flags |= zfs_cmd_api::RecvFlags::Verbose;
+                    send_flags |= zfs_cmd_api::SendFlags::Verbose;
+                }
+
+                let send = src_zfs.send(&ds.src.name[..], prev_dst_ds.as_ref().map(|x| &**x), send_flags).unwrap();
+                let recv = dest_zfs.recv(dest_dataset, Vec::new(), None, Vec::new(), recv_flags).unwrap();
+
+                zfs_cmd_api::send_recv(send, recv).unwrap();
+
+                // use as prev after send/recv finishes
+            },
+            Some(_) => {
+                // no transfer needed
+                // let's just us it as a prev
+            }
+        }
+
+        prev_dst_ds = Some(ds.src.name.clone());
+    }
+
+
+    // XXX: bookmarks on the SRC allow deletion of snapshots while still keeping send
+    // efficiency. As a result, we should create bookmarks to identify points we'll want to
+    // sync from
+    //
+    // for dataset, find the common base snapshot
+    // for each snapshot after the common base
+    //  send it snap
+    //  common base = sent snap
+    //  repeat until all snaps in src are in dest
+
+    // XXX: we currently invoke `zfs` for each snapshot transfer. Using `-I` might allow us to
+    // reduce the number of invocations.
+    //
+    // XXX: consider if we're essentially implimenting `zfs send -I`
+    //
+    // XXX: consider if our snapshot ordering is still acurate/workable in the face of `zfs rollback` usage.
+    // when rollback is used on the src, it will lose more recent snapshots/bookmarks, but the
+    // dst keeps them. Because zcopy's ordering is based on the createtxg on the src, and
+    // because incrimentals are generated only using src datasets, the zcopy is expected to
+    // generate a totally reasonable and normal incrimental send. On the dst side, it will have
+    // a "graph" of snapshots. Trying to generate a recv from there may not work. Basically: we
+    // would assume the wrong parent snapshot of the new snapshots (sent after a src rollback)
+    // because we treat snapshots as a linear history, and rollback makes it non-linear.
+    //
+    // It's not entirely clear if this can be resolved. We might be able to repeatedly ask for
+    // the sizes of incrimental snapshots from dst for various origin datasets, and select the
+    // smallest one (this may be useful in general for reducing space usage).
+
+}
+
 // hack to try to get `app_from_crate!()` to regenerate.
 #[allow(dead_code)]
 const CARGO_TOML: &'static str = include_str!("../Cargo.toml");
@@ -200,207 +405,7 @@ fn main() {
         println!("copy from {} to {} (recursive={})", src_dataset, dest_dataset, recursive);
         println!("dry_run: {}", dry_run);
 
-        let src_zfs = Zfs::from_env_prefix("SRC");
-        let dest_zfs = Zfs::from_env_prefix("DEST");
-
-        let mut list_builder = zfs_cmd_api::ListBuilder::default();
-        list_builder.include_snapshots()
-            .depth(1)
-            .with_elements(vec!["createtxg", "name", "guid", "type"]);
-
-        // - dest will contain some or none of snapshots/bookmarks in source
-        // - dest may have previously recieved but later deleted some snapshots
-        // - src may have previously sent but later deleted some snapshots. Some of these may be
-        //   preserved as bookmarks.
-        //
-        // for each snapshot in source, we want to send it to dest
-        // 
-        // simple algorithm:
-        //   - generate 2 ordered lists of snapshots (excluding bookmarks). order using createtxg
-        //   - use guids to merge the 2 lists into a single list, with 3 markers:
-        //     - in both, only in src, only in dest
-        //   - iterate through the merged list, generating a `send` for each pair of elements,
-        //     excluding those pairs where the second pair exists in both src & dest
-        //
-        // Problems:
-        //  - need to transfer and manage entire list of snapshots. Will this grow too large?
-
-
-        // NOTE: we only get bookmarks for `src` because they aren't useful on the dst
-        //
-        // XXX: we could optimize the zfs-cmd-to-zoop datapassing by not asking for "type" in
-        // dst_list, but it's easier to include it.
-        let src_list =
-            src_zfs.list_from_builder(list_builder.clone().include_bookmarks().with_dataset(src_dataset))
-            .expect("src list failed");
-        let dst_list = dest_zfs.list_from_builder(list_builder.clone().with_dataset(dest_dataset))
-            .expect("dst list failed");
-
-
-        fn to_datasets(list_vecs: Vec<Vec<String>>) ->
-            Vec<Dataset>
-        {
-            let mut dss = Vec::with_capacity(list_vecs.len());
-
-            for mut e in list_vecs.into_iter() {
-                let mut e = e.drain(..);
-                let createtxg = e.next().unwrap();
-                let name = e.next().unwrap();
-                let guid = e.next().unwrap();
-                let type_= e.next().unwrap();
-
-                let ds = Dataset {
-                    guid: Guid::from(guid.clone()),
-                    ds: SubDataset {
-                        type_: DatasetType::try_from(&type_[..]).unwrap_or_else(|v| {
-                            eprintln!("zfs entry: {:?} {:?} {:?} {:?}",
-                                      createtxg, name, guid, type_);
-
-                            panic!("{:?}", v);
-                        }),
-                        name: name.to_owned(),
-                        createtxg: CreateTxg::from(createtxg),
-                    }
-                };
-
-                dss.push(ds)
-            }
-
-            dss
-        }
-
-
-        // TODO: determine if dataset has a partial receive, and resume it before proceeding with
-        // normal incrimental send
-
-        let src_dss = to_datasets(From::from(&src_list));
-        let dst_dss = to_datasets(From::from(&dst_list));
-
-
-        let mut dst_guid_map: BTreeMap<Guid, Dataset> = BTreeMap::default();
-        dst_guid_map.extend(dst_dss.into_iter().map(|v| (v.guid.clone(), v)));
-
-
-        let mut merged_dss: BTreeMap<(CreateTxg, Guid), GlobalDataset> = BTreeMap::default();
-
-        // datasets have guids that persist across send/recv. Use this to identify common
-        // elements. guids identify snapshots across pools.
-        // merge sets by guid
-        //
-        // note that bookmarks have a guid equal to the snapshot they were created from
-        //
-        // for the purposes of syncing src to dst, dst datasets that don't exist in any form on src
-        // are irrelevent, so we discard them (they are the items remaining in dst_dss)
-        // 
-        // merged_dss is ordered by (createtxg, guid). We really just want createtxg. Using the
-        // guid lets us avoid having a multimap (a single createtxg may have multiple snaps).
-        //
-        //  XXX: consider the case where multiple snaps exist in the same createtxg. Is it useful
-        //  to have further ordering? Should we include the timestamp here?
-        for src_ds in src_dss.into_iter() {
-            let dst = dst_guid_map.remove(&src_ds.guid).map(|x| x.ds);
-            let k = (src_ds.ds.createtxg.clone(), src_ds.guid.clone());
-            match merged_dss.insert(k,
-                    GlobalDataset {
-                        guid: src_ds.guid,
-                        src: src_ds.ds,
-                        dst: dst,
-                    }
-                ){
-                Some(x) => {
-                    // continue in a duplicate key case, but warn. This should never happen due to
-                    // our use of the guid as a piece of the key.
-                    eprintln!("WARNING: duplicate key: {:?}", x)
-                },
-                None => {},
-            }
-        }
-
-        // iterate over merged_dss
-        //  - send incrimental for each GlobalDataset where `dst` is None and the src type is not a
-        //    bookmark
-        //
-        //  - Use the previous GlobalDataset as the basis for the incremental send
-
-        
-        let mut prev_dst_ds: Option<String> = None;
-        for (_, ds) in merged_dss.into_iter() {
-            if verbose {
-                eprintln!("examine: {:?}", ds);
-            }
-
-            match &ds.dst {
-                None => {
-                    if ds.src.type_ == DatasetType::Bookmark {
-                        // bookmarks can't be sent, they can only be used as the basis for an
-                        // incirmental send. skip.
-                        continue;
-                    }
-
-                    // send it
-                    //
-                    // NEED send|recv (pipe) API in zfs-cmd-api
-                    let mut send_flags = zfs_cmd_api::SendFlags::LargeBlock
-                        | zfs_cmd_api::SendFlags::EmbedData
-                        | zfs_cmd_api::SendFlags::Compressed;
-                    let mut recv_flags = zfs_cmd_api::RecvFlags::Resumeable
-                        | zfs_cmd_api::RecvFlags::Force;
-
-                    if dry_run {
-                        // XXX: consider performing a send dry run (optionally) instead, omitting
-                        // the recv altogether.
-                        recv_flags |= zfs_cmd_api::RecvFlags::DryRun;
-                    }
-                    if verbose {
-                        recv_flags |= zfs_cmd_api::RecvFlags::Verbose;
-                        send_flags |= zfs_cmd_api::SendFlags::Verbose;
-                    }
-
-                    let send = src_zfs.send(&ds.src.name[..], prev_dst_ds.as_ref().map(|x| &**x), send_flags).unwrap();
-                    let recv = dest_zfs.recv(dest_dataset, Vec::new(), None, Vec::new(), recv_flags).unwrap();
-
-                    zfs_cmd_api::send_recv(send, recv).unwrap();
-
-                    // use as prev after send/recv finishes
-                },
-                Some(_) => {
-                    // no transfer needed
-                    // let's just us it as a prev
-                }
-            }
-
-            prev_dst_ds = Some(ds.src.name.clone());
-        }
-
-
-        // XXX: bookmarks on the SRC allow deletion of snapshots while still keeping send
-        // efficiency. As a result, we should create bookmarks to identify points we'll want to
-        // sync from
-        //
-        // for dataset, find the common base snapshot
-        // for each snapshot after the common base
-        //  send it snap
-        //  common base = sent snap
-        //  repeat until all snaps in src are in dest
-
-        // XXX: we currently invoke `zfs` for each snapshot transfer. Using `-I` might allow us to
-        // reduce the number of invocations.
-        //
-        // XXX: consider if we're essentially implimenting `zfs send -I`
-        //
-        // XXX: consider if our snapshot ordering is still acurate/workable in the face of `zfs rollback` usage.
-        // when rollback is used on the src, it will lose more recent snapshots/bookmarks, but the
-        // dst keeps them. Because zcopy's ordering is based on the createtxg on the src, and
-        // because incrimentals are generated only using src datasets, the zcopy is expected to
-        // generate a totally reasonable and normal incrimental send. On the dst side, it will have
-        // a "graph" of snapshots. Trying to generate a recv from there may not work. Basically: we
-        // would assume the wrong parent snapshot of the new snapshots (sent after a src rollback)
-        // because we treat snapshots as a linear history, and rollback makes it non-linear.
-        //
-        // It's not entirely clear if this can be resolved. We might be able to repeatedly ask for
-        // the sizes of incrimental snapshots from dst for various origin datasets, and select the
-        // smallest one (this may be useful in general for reducing space usage).
-
+        zcopy_one(dry_run, verbose, src_dataset, dest_dataset);
     } else {
         println!("need a SubCommand");
     }
