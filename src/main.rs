@@ -20,7 +20,9 @@ extern crate clap;
 
 extern crate zfs_cmd_api;
 extern crate fmt_extra;
+extern crate enumflags2;
 
+use enumflags2::BitFlags;
 use zfs_cmd_api::Zfs;
 use clap::{Arg,SubCommand,AppSettings};
 use std::collections::BTreeMap;
@@ -167,6 +169,14 @@ fn main() {
                  .index(2)
                  .required(true)
                  )
+        // convert snapshots that were transfered to bookmarks
+        // subcommand(SubCommand::with_name("forget-replicated")
+        //
+        // create new snapshot(s)
+        // subcommand(SubCommand::with_name("snap")
+        //
+        // examine snapshots & delete some of them
+        // subcommand(SubCommand::with_name("snap-cleanup")
             ).get_matches();
 
 
@@ -301,7 +311,7 @@ fn main() {
         //  - Use the previous GlobalDataset as the basis for the incremental send
 
         
-        let mut prev_dst_ds = None;
+        let mut prev_dst_ds: Option<String> = None;
         for (_, ds) in merged_dss.into_iter() {
 
             match &ds.dst {
@@ -315,16 +325,28 @@ fn main() {
                     // send it
                     //
                     // NEED send|recv (pipe) API in zfs-cmd-api
+                    let send_flags = BitFlags::default();
+                    let mut recv_flags = BitFlags::default();
+
+                    if dry_run {
+                        // XXX: consider performing a send dry run (optionally) instead.
+                        recv_flags |= zfs_cmd_api::RecvFlags::DryRun;
+                    }
+
+                    let send = src_zfs.send(src_dataset, prev_dst_ds.as_ref().map(|x| &**x), send_flags).unwrap();
+                    let recv = dest_zfs.recv(dest_dataset, Vec::new(), None, Vec::new(), recv_flags).unwrap();
+
+                    zfs_cmd_api::send_recv(send, recv).unwrap();
 
                     // use as prev after send/recv finishes
                 },
-                Some(x) => {
+                Some(_) => {
                     // no transfer needed
                     // let's just us it as a prev
                 }
             }
 
-            prev_dst_ds = Some(ds.clone());
+            prev_dst_ds = Some(ds.src.name.clone());
         }
 
 

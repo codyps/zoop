@@ -346,6 +346,8 @@ impl Zfs {
     {
 
     }
+
+    //pub fn recv_abort_incomplete(&self)
     */
 
     pub fn send(&self, snapname: &str, from: Option<&str>, flags: BitFlags<SendFlags>) -> io::Result<ZfsSend>
@@ -463,8 +465,6 @@ impl Zfs {
             child: cmd.spawn()?,
         })
     }
-
-    //pub fn recv_abort_incomplete(&self)
 }
 
 pub struct ZfsSend {

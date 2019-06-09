@@ -253,6 +253,7 @@ name = "zoop"
 version = "0.1.1-dev"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "enumflags2 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "fmt-extra 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "zfs-cmd-api 0.1.0",
 ]
