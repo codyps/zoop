@@ -283,6 +283,8 @@ impl Zfs {
             }
         }
 
+        eprintln!("run: {:?}", cmd);
+
         let output = cmd.output().map_err(|e| ZfsError::Exec{ io: e})?;
 
         if !output.status.success() {
@@ -400,9 +402,12 @@ impl Zfs {
             }
         }
 
+        cmd.arg(snapname);
+
+        eprintln!("run: {:?}", cmd);
+
         Ok(ZfsSend {
             child: cmd
-                .arg(snapname)
                 .stdout(std::process::Stdio::piped())
                 .spawn()?
         })
@@ -460,9 +465,12 @@ impl Zfs {
         }
 
         cmd.arg(snapname);
+        eprintln!("run: {:?}", cmd);
 
         Ok(ZfsRecv {
-            child: cmd.spawn()?,
+            child: cmd
+                .stdin(std::process::Stdio::piped())
+                .spawn()?,
         })
     }
 }
@@ -479,9 +487,22 @@ pub struct ZfsRecv {
 
 pub fn send_recv(mut send: ZfsSend, mut recv: ZfsRecv) -> io::Result<u64>
 {
-    std::io::copy(send.child.stdout.as_mut().unwrap(), recv.child.stdin.as_mut().unwrap())
+    let bytes = std::io::copy(send.child.stdout.as_mut().unwrap(), recv.child.stdin.as_mut().unwrap())?;
 
-    // XXX: check child return values
+    // discard the stdin/stdout we left open
+    // (and hope this causes the subprocesses to exit)
+    send.child.stdout.take();
+    recv.child.stdin.take();
+
+    let ss = send.child.wait()?;
+    let rs = recv.child.wait()?;
+
+    if !ss.success() || !rs.success() {
+        return Err(io::Error::new(io::ErrorKind::Other,
+                           format!("send or recv failed: {:?}, {:?}", ss.code(), rs.code())));
+    }
+
+    Ok(bytes)
 }
 
 #[derive(EnumFlags,Copy,Clone,Debug,PartialEq,Eq)]

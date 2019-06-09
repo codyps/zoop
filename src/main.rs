@@ -42,7 +42,7 @@ impl TryFrom<&str> for DatasetType {
         Ok(match type_str {
             "bookmark" => DatasetType::Bookmark,
             "snapshot" => DatasetType::Snapshot,
-            _ => return Err(format!("type {} unrecognized", type_str)),
+            _ => return Err(format!("DatasetType unrecognized: {}", type_str)),
         })
     }
 }
@@ -152,7 +152,12 @@ fn main() {
     let matches = app_from_crate!()
         .arg(Arg::with_name("dry-run")
              .help("Do not execute anything which would change system state. Print what would state would be changed")
-             .short("N")
+             .short("n")
+             .global(true)
+            )
+        .arg(Arg::with_name("verbose")
+             .help("Emit extra info")
+             .short("v")
              .global(true)
             )
         .setting(AppSettings::SubcommandRequired)
@@ -181,6 +186,7 @@ fn main() {
 
 
     let dry_run = matches.occurrences_of("dry-run") > 0;
+    let verbose = matches.occurrences_of("verbose") > 0;
 
 
     if let Some(matches) = matches.subcommand_matches("zcopy") {
@@ -237,15 +243,21 @@ fn main() {
             let mut dss = Vec::with_capacity(list_vecs.len());
 
             for mut e in list_vecs.into_iter() {
-                let createtxg = e.pop().unwrap();
-                let name = e.pop().unwrap();
-                let guid = e.pop().unwrap();
-                let type_= e.pop().unwrap();
+                let mut e = e.drain(..);
+                let createtxg = e.next().unwrap();
+                let name = e.next().unwrap();
+                let guid = e.next().unwrap();
+                let type_= e.next().unwrap();
 
                 let ds = Dataset {
-                    guid: Guid::from(guid),
+                    guid: Guid::from(guid.clone()),
                     ds: SubDataset {
-                        type_: DatasetType::try_from(&type_[..]).unwrap(),
+                        type_: DatasetType::try_from(&type_[..]).unwrap_or_else(|v| {
+                            eprintln!("zfs entry: {:?} {:?} {:?} {:?}",
+                                      createtxg, name, guid, type_);
+
+                            panic!("{:?}", v);
+                        }),
                         name: name.to_owned(),
                         createtxg: CreateTxg::from(createtxg),
                     }
@@ -313,6 +325,7 @@ fn main() {
         
         let mut prev_dst_ds: Option<String> = None;
         for (_, ds) in merged_dss.into_iter() {
+            eprintln!("examine: {:?}", ds);
 
             match &ds.dst {
                 None => {
@@ -325,15 +338,20 @@ fn main() {
                     // send it
                     //
                     // NEED send|recv (pipe) API in zfs-cmd-api
-                    let send_flags = BitFlags::default();
-                    let mut recv_flags = BitFlags::default();
+                    let mut send_flags = zfs_cmd_api::SendFlags::LargeBlock
+                        | zfs_cmd_api::SendFlags::EmbedData;
+                    let mut recv_flags = BitFlags::default() | zfs_cmd_api::RecvFlags::Force;
 
                     if dry_run {
                         // XXX: consider performing a send dry run (optionally) instead.
                         recv_flags |= zfs_cmd_api::RecvFlags::DryRun;
                     }
+                    if verbose {
+                        recv_flags |= zfs_cmd_api::RecvFlags::Verbose;
+                        send_flags |= zfs_cmd_api::SendFlags::Verbose;
+                    }
 
-                    let send = src_zfs.send(src_dataset, prev_dst_ds.as_ref().map(|x| &**x), send_flags).unwrap();
+                    let send = src_zfs.send(&ds.src.name[..], prev_dst_ds.as_ref().map(|x| &**x), send_flags).unwrap();
                     let recv = dest_zfs.recv(dest_dataset, Vec::new(), None, Vec::new(), recv_flags).unwrap();
 
                     zfs_cmd_api::send_recv(send, recv).unwrap();
