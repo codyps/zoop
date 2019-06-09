@@ -302,7 +302,7 @@ fn main() {
 
         
         let mut prev_dst_ds = None;
-        for (k, ds) in merged_dss.into_iter() {
+        for (_, ds) in merged_dss.into_iter() {
 
             match &ds.dst {
                 None => {
