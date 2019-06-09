@@ -13,7 +13,7 @@ Manage zfs snapshot transfer
  - zxfer
   - unhappy if snapshots that were transfered to destiation are later deleted
     on source. requires one delete them on the destination before it will sync.
-  - Uses `zfs send -i`, no used of `-I`. Commands:
+  - Uses `zfs send -i`, no use of `-I`. Commands:
     - `send -nPv`
     - `send -nv`
     - `receive`, `receive -F`

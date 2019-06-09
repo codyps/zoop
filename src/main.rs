@@ -325,7 +325,9 @@ fn main() {
         
         let mut prev_dst_ds: Option<String> = None;
         for (_, ds) in merged_dss.into_iter() {
-            eprintln!("examine: {:?}", ds);
+            if verbose {
+                eprintln!("examine: {:?}", ds);
+            }
 
             match &ds.dst {
                 None => {
@@ -339,8 +341,9 @@ fn main() {
                     //
                     // NEED send|recv (pipe) API in zfs-cmd-api
                     let mut send_flags = zfs_cmd_api::SendFlags::LargeBlock
-                        | zfs_cmd_api::SendFlags::EmbedData;
-                    let mut recv_flags = zfs_cmd_api::RecvFlags::Resumable
+                        | zfs_cmd_api::SendFlags::EmbedData
+                        | zfs_cmd_api::SendFlags::Compressed;
+                    let mut recv_flags = zfs_cmd_api::RecvFlags::Resumeable
                         | zfs_cmd_api::RecvFlags::Force;
 
                     if dry_run {
@@ -379,6 +382,24 @@ fn main() {
         //  send it snap
         //  common base = sent snap
         //  repeat until all snaps in src are in dest
+
+        // XXX: we currently invoke `zfs` for each snapshot transfer. Using `-I` might allow us to
+        // reduce the number of invocations.
+        //
+        // XXX: consider if we're essentially implimenting `zfs send -I`
+        //
+        // XXX: consider if our snapshot ordering is still acurate/workable in the face of `zfs rollback` usage.
+        // when rollback is used on the src, it will lose more recent snapshots/bookmarks, but the
+        // dst keeps them. Because zcopy's ordering is based on the createtxg on the src, and
+        // because incrimentals are generated only using src datasets, the zcopy is expected to
+        // generate a totally reasonable and normal incrimental send. On the dst side, it will have
+        // a "graph" of snapshots. Trying to generate a recv from there may not work. Basically: we
+        // would assume the wrong parent snapshot of the new snapshots (sent after a src rollback)
+        // because we treat snapshots as a linear history, and rollback makes it non-linear.
+        //
+        // It's not entirely clear if this can be resolved. We might be able to repeatedly ask for
+        // the sizes of incrimental snapshots from dst for various origin datasets, and select the
+        // smallest one (this may be useful in general for reducing space usage).
 
     } else {
         println!("need a SubCommand");

@@ -39,9 +39,33 @@ DST_DS="$ZOOP_TEST_DS/dst"
 zfs create "$SRC_DS"
 zfs create "$DST_DS"
 
-for i in $(seq 1 10); do
+for i in $(seq 1 5); do
 	touch "$SRC_PATH/$i"
 	zfs snapshot "$SRC_DS@$i"
 done
 
-$ZOOP zcopy -vn $SRC_DS $DST_DS
+"$ZOOP" zcopy -vn "$SRC_DS" "$DST_DS"
+"$ZOOP" zcopy -v "$SRC_DS" "$DST_DS"
+
+for i in $(seq 25 30); do
+	touch "$SRC_PATH/$i"
+	zfs snapshot "$SRC_DS@$i"
+done
+
+"$ZOOP" zcopy -v "$SRC_DS" "$DST_DS"
+
+to_bm() {
+	local ds="$1"
+	local n="$2"
+	zfs bookmark "${ds}@${n}" "${ds}#${n}"
+	zfs destroy "${ds}@${n}"
+}
+
+to_bm "$SRC_DS" 30
+
+for i in $(seq 40 44); do
+	touch "$SRC_PATH/$i"
+	zfs snapshot "$SRC_DS@$i"
+done
+
+"$ZOOP" zcopy -v "$SRC_DS" "$DST_DS"
