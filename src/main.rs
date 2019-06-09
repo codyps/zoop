@@ -123,6 +123,24 @@ impl AsRef<str> for Guid {
     }
 }
 
+/*
+struct DrainBTreeMap<K, V> {
+    tree: BTreeMap<K, V>,
+    iter: std::collections::btree_map::IterMut<K, V>
+}
+
+trait ExtendBTreeMap {
+    fn drain(&mut self) ->
+}
+
+impl<T> Iterator for DrainBTreeMap<T> {
+    type Item = T;
+    fn next(&mut self) -> Item {
+        self.
+    }
+}
+*/
+
 // hack to try to get `app_from_crate!()` to regenerate.
 #[allow(dead_code)]
 const CARGO_TOML: &'static str = include_str!("../Cargo.toml");
@@ -206,7 +224,7 @@ fn main() {
         fn to_datasets(list_vecs: Vec<Vec<String>>) ->
             Vec<Dataset>
         {
-            let mut dss = Vec::new();
+            let mut dss = Vec::with_capacity(list_vecs.len());
 
             for mut e in list_vecs.into_iter() {
                 let createtxg = e.pop().unwrap();
@@ -217,13 +235,13 @@ fn main() {
                 let ds = Dataset {
                     guid: Guid::from(guid),
                     ds: SubDataset {
-                        type_: DatasetType::try_from(type_).unwrap(),
+                        type_: DatasetType::try_from(&type_[..]).unwrap(),
                         name: name.to_owned(),
                         createtxg: CreateTxg::from(createtxg),
                     }
                 };
 
-                dss.append(ds)
+                dss.push(ds)
             }
 
             dss
@@ -238,10 +256,10 @@ fn main() {
 
 
         let mut dst_guid_map: BTreeMap<Guid, Dataset> = BTreeMap::default();
-        dst_guid_map.extend(dst_dss.drain());
+        dst_guid_map.extend(dst_dss.into_iter().map(|v| (v.guid.clone(), v)));
 
 
-        let mut merged_dss: BTreeMap<CreateTxg, GlobalDataset> = BTreeMap::default();
+        let mut merged_dss: BTreeMap<(CreateTxg, Guid), GlobalDataset> = BTreeMap::default();
 
         // datasets have guids that persist across send/recv. Use this to identify common
         // elements. guids identify snapshots across pools.
@@ -257,9 +275,9 @@ fn main() {
         //
         //  XXX: consider the case where multiple snaps exist in the same createtxg. Is it useful
         //  to have further ordering? Should we include the timestamp here?
-        for src_ds in src_dss.drain() {
+        for src_ds in src_dss.into_iter() {
             let dst = dst_guid_map.remove(&src_ds.guid).map(|x| x.ds);
-            let k = (src_ds.createtxg.clone(), src_ds.guid.clone());
+            let k = (src_ds.ds.createtxg.clone(), src_ds.guid.clone());
             match merged_dss.insert(k,
                     GlobalDataset {
                         guid: src_ds.guid,
@@ -284,9 +302,9 @@ fn main() {
 
         
         let mut prev_dst_ds = None;
-        for ds in merged_dss.drain() {
+        for (k, ds) in merged_dss.into_iter() {
 
-            match ds.dst {
+            match &ds.dst {
                 None => {
                     if ds.src.type_ == DatasetType::Bookmark {
                         // bookmarks can't be sent, they can only be used as the basis for an
@@ -306,7 +324,7 @@ fn main() {
                 }
             }
 
-            prev_dst_ds = Some(ds);
+            prev_dst_ds = Some(ds.clone());
         }
 
 
