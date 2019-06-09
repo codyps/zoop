@@ -1,0 +1,47 @@
+#! /bin/bash
+set -euf -o pipefail
+if [ -z "${RUST_BACKTRACE:+}" ]; then
+	export RUST_BACKTRACE=1
+fi
+
+if [ $# -ne 1 ]; then
+	>&2 echo "usage: $0 <test-filesystem>"
+	exit 1
+fi
+
+ZOOP_TEST_DS="$1-$$"
+
+: ${ZOOP:=target/debug/zoop}
+
+ZOOP_TEST_PATH=/tmp/zoop-test-$$
+
+zoop_test_ds=false
+: ${ZOOP_KEEP_TMP:=false}
+cleanup() {
+	if $ZOOP_KEEP_TMP; then
+		return	
+	fi
+	if $zoop_test_ds && [ -n "$ZOOP_TEST_DS" ]; then
+		zfs destroy -vrf "$ZOOP_TEST_DS"
+	fi
+}
+trap cleanup EXIT
+
+zfs create "$ZOOP_TEST_DS" -o "mountpoint=$ZOOP_TEST_PATH"
+zoop_test_ds=true
+
+
+SRC_PATH="$ZOOP_TEST_PATH/src"
+
+SRC_DS="$ZOOP_TEST_DS/src"
+DST_DS="$ZOOP_TEST_DS/dst"
+
+zfs create "$SRC_DS"
+zfs create "$DST_DS"
+
+for i in $(seq 1 10); do
+	touch "$SRC_PATH/$i"
+	zfs snapshot "$SRC_DS@$i"
+done
+
+$ZOOP zcopy -vn $SRC_DS $DST_DS
