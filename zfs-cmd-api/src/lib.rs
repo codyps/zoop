@@ -1,8 +1,12 @@
 extern crate failure;
 extern crate fmt_extra;
 #[macro_use] extern crate failure_derive;
-#[macro_use] extern crate bitflags;
 
+extern crate enumflags2;
+#[macro_use]
+extern crate enumflags2_derive;
+
+use enumflags2::BitFlags;
 use std::ops::{Deref,DerefMut};
 use std::path::{Path,PathBuf};
 use std::env;
@@ -342,40 +346,214 @@ impl Zfs {
     {
 
     }
-
-    pub fn send(&self, snapname: String, from: Option<String>, flags: SendFlags) -> ZfsSend
-    {
-
-    }
     */
-}
 
-bitflags! {
-    struct SendFlags: u16 {
-        // these correspond to the lzc SendFlags
-        const EmbedData  = 1<<0;
-        const LargeBlock = 1<<1;
-        const Compress   = 1<<2;
-        const Raw        = 1<<3;
+    pub fn send(&self, snapname: &str, from: Option<&str>, flags: BitFlags<SendFlags>) -> io::Result<ZfsSend>
+    {
+        let mut cmd = self.cmd();
 
+        cmd.arg("send");
 
-        // these are additional items corresponding to `zfs send` cmd flags
-        /// -D
-        const Dedup  = 1<<4;
-        /// -I
-        const IncludeIntermediary = 1<<5;
-        /// -h
-        const IncludeHolds = 1<<6;
-        /// -p
-        const IncludeProps = 1<<6;
-        /// -v
-        const Verbose = 1<<8;
-        /// -n
-        const DryRun = 1<<9;
-        /// -P
-        const Parsable = 1<<10;
+        let mut opts = "-".to_owned();
+
+        let mut include_intermediary = false;
+        // realistically, a series of `if flags.contains(*) {*}` statements more susinctly
+        // represents the work needed to be done here. Unfortunately, it isn't clear how to form
+        // that in a way that ensures we have handling for all `SendFlags`.
+        for flag in flags.iter() {
+            match flag {
+                SendFlags::EmbedData => { opts.push('e') },
+                SendFlags::LargeBlock => { opts.push('L') },
+                SendFlags::Compressed => { opts.push('c') },
+                SendFlags::Raw => { opts.push('w') },
+
+                SendFlags::Dedup => { opts.push('D') },
+
+                SendFlags::IncludeIntermediary => {
+                    include_intermediary = true
+                },
+                SendFlags::IncludeHolds => { opts.push('h') },
+                SendFlags::IncludeProps => { opts.push('P') },
+                SendFlags::Verbose => { opts.push('v') },
+                SendFlags::DryRun => { opts.push('n') },
+                SendFlags::Parsable => { opts.push('P') },
+                SendFlags::Replicate => { opts.push('R') },
+            }
+        }
+
+        cmd.arg(opts);
+
+        match from {
+            Some(f) => {
+                if include_intermediary {
+                    cmd.arg("-I")
+                } else {
+                    cmd.arg("-i")
+                }.arg(f);
+            }
+            None => {
+                if include_intermediary {
+                    panic!("include_intermediary set to no effect because no `from` was specified");
+                }
+            }
+        }
+
+        Ok(ZfsSend {
+            child: cmd
+                .arg(snapname)
+                .stdout(std::process::Stdio::piped())
+                .spawn()?
+        })
     }
+
+    // XXX: `set_props` would ideally take an iterator over things that are &str like
+    // 
+    // note: `lzc_receive()` uses bools for `force` and `raw`, and has no other flags. It then has
+    // a seperate `lzc_receive_resumable()` function for resumable (which internally passes another
+    // boolean), `lzc_receive_with_reader()` then exposes an additional `resumable` boolean (but
+    // also provides a mechanism to pass in a `dmu_replay_record_t` which was read from the `fd`
+    // prior to function invocation).
+    pub fn recv(&self, snapname: &str, set_props: Vec<(String,String)>, origin: Option<&str>,
+        
+        exclude_props: Vec<String>, flags: BitFlags<RecvFlags>) ->
+        io::Result<ZfsRecv>
+    {
+        let mut cmd = self.cmd();
+
+        cmd.arg("recv");
+
+        let mut opts = "-".to_owned();
+
+        for flag in flags.iter() {
+            match flag {
+                RecvFlags::Force => opts.push('F'),
+                RecvFlags::Resumeable => opts.push('s'),
+
+                RecvFlags::DiscardFirstName => opts.push('d'),
+                RecvFlags::DiscardAllButLastName => opts.push('e'),
+                RecvFlags::IgnoreHolds => opts.push('h'),
+                RecvFlags::DryRun => opts.push('n'),
+                RecvFlags::NoMount => opts.push('u'),
+                RecvFlags::Verbose => opts.push('v'),
+            }
+        }
+
+        cmd
+            .arg(opts);
+
+        for set_prop in set_props.into_iter() {
+            let mut s = set_prop.0;
+            s.push('=');
+            s.push_str(&set_prop.1[..]);
+            cmd.arg("-o").arg(s);
+        }
+
+        for exclude_prop in exclude_props.into_iter() {
+            cmd.arg("-x").arg(exclude_prop);
+        }
+
+        match origin {
+            Some(o) => { cmd.arg("-o").arg(o); },
+            None => {},
+        }
+
+        cmd.arg(snapname);
+
+        Ok(ZfsRecv {
+            child: cmd.spawn()?,
+        })
+    }
+
+    //pub fn recv_abort_incomplete(&self)
 }
+
+pub struct ZfsSend {
+    // note: in the lzc case, this is just a `fd`
+    child: std::process::Child,
+}
+
+pub struct ZfsRecv {
+    // note: in the lzc case, this is just a `fd`
+    child: std::process::Child,
+}
+
+pub fn send_recv(mut send: ZfsSend, mut recv: ZfsRecv) -> io::Result<u64>
+{
+    std::io::copy(send.child.stdout.as_mut().unwrap(), recv.child.stdin.as_mut().unwrap())
+
+    // XXX: check child return values
+}
+
+#[derive(EnumFlags,Copy,Clone,Debug,PartialEq,Eq)]
+pub enum RecvFlags {
+    // correspond to `lzc` booleans/functions
+    /// -F
+    Force = 1<<0,
+    /// -s
+    Resumeable = 1<<1,
+
+    // lzc includes a `raw` boolean with no equivelent in the `zfs recv` cmd. It isn't immediately
+    // clear how this gets set by `zfs recv`, but it might be by examining the
+    // `dmu_replay_record_t`.
+    //
+    // Raw,
+
+    // No equive in `lzc`
+    // These appear to essentially be implimented by
+    // examining the `dmu_replay_record_t` and modifying args to `lzc_recieve_with_header()`.
+    /// -d
+    DiscardFirstName = 1<<2,
+    /// -e
+    DiscardAllButLastName = 1<<3,
+
+    // `zfs receive` options with no equive in `lzc`.
+    //
+    // unclear how holds are handled. `zfs send` has a similar mismatch (no flag in `lzc_send()`)
+    /// -h
+    IgnoreHolds = 1<<4,
+    // I really don't know.
+    /// -u
+    NoMount = 1<<5,
+
+
+    /// -v
+    Verbose = 1<<6,
+    /// -n
+    DryRun = 1<<7,
+}
+
+
+#[derive(EnumFlags,Copy,Clone,Debug,PartialEq,Eq)]
+pub enum SendFlags {
+    // correspond to lzc SendFlags
+    /// -e
+    EmbedData = 1<<0,
+    /// -L
+    LargeBlock = 1<<1,
+    /// -c
+    Compressed = 1<<2,
+    /// -w
+    Raw = 1<<3,
+
+    // these are additional items corresponding to `zfs send` cmd flags
+    /// -D
+    Dedup = 1<<4,
+    /// -I
+    IncludeIntermediary = 1<<5,
+    /// -h
+    IncludeHolds = 1<<6,
+    /// -p
+    IncludeProps = 1<<7,
+    /// -v
+    Verbose = 1<<8,
+    /// -n
+    DryRun = 1<<9,
+    /// -P
+    Parsable = 1<<10,
+    /// -R
+    Replicate = 1<<11,
+}
+
 
 // 
 // send -t <token>

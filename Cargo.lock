@@ -241,6 +241,8 @@ name = "zfs-cmd-api"
 version = "0.1.0"
 dependencies = [
  "bitflags 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "enumflags2 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "enumflags2_derive 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure_derive 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "fmt-extra 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -251,8 +253,6 @@ name = "zoop"
 version = "0.1.1-dev"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "enumflags2 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "enumflags2_derive 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fmt-extra 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "zfs-cmd-api 0.1.0",
 ]
