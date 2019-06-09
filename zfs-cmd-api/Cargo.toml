@@ -7,3 +7,4 @@ authors = ["Cody P Schafer <dev@codyps.com>"]
 failure = "*"
 failure_derive = "*"
 fmt-extra = "*"
+bitflags = "*"

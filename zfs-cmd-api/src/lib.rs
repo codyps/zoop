@@ -1,6 +1,7 @@
 extern crate failure;
 extern crate fmt_extra;
 #[macro_use] extern crate failure_derive;
+#[macro_use] extern crate bitflags;
 
 use std::ops::{Deref,DerefMut};
 use std::path::{Path,PathBuf};
@@ -333,6 +334,7 @@ impl Zfs {
         }
     }
 
+    /*
     /// Resume sending a stream using `receive_resume_token` from the destination filesystem
     ///
     /// flags here is constrained to `[Penv]`
@@ -345,6 +347,7 @@ impl Zfs {
     {
 
     }
+    */
 }
 
 bitflags! {

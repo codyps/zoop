@@ -24,8 +24,10 @@ extern crate fmt_extra;
 use zfs_cmd_api::Zfs;
 use clap::{Arg,SubCommand,AppSettings};
 use std::collections::BTreeMap;
+use std::borrow::Borrow;
+use std::convert::TryFrom;
 
-#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone,Debug)]
+#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone)]
 enum DatasetType {
     Snapshot,
     Bookmark
@@ -38,34 +40,40 @@ impl TryFrom<&str> for DatasetType {
         Ok(match type_str {
             "bookmark" => DatasetType::Bookmark,
             "snapshot" => DatasetType::Snapshot,
-            _ => return format!("type {} unrecognized"),
+            _ => return Err(format!("type {} unrecognized", type_str)),
         })
     }
 }
 
-#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone,Debug)]
+#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone)]
 struct SubDataset {
     type_: DatasetType,
     name: String,
-    createtxg: String,
+    createtxg: CreateTxg,
 }
 
-#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone,Debug)]
+#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone)]
 struct GlobalDataset {
-    guid: String,
+    guid: Guid,
     src: SubDataset,
     dst: Option<SubDataset>,
 }
 
-#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone,Debug)]
+#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone)]
 struct Dataset {
-    guid: String,
+    guid: Guid,
     ds: SubDataset,
 }
 
-#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone,Debug)]
+#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone)]
 struct CreateTxg {
     s: String
+}
+
+impl From<String> for CreateTxg {
+    fn from(s: String) -> Self {
+        CreateTxg { s: s }
+    }
 }
 
 impl From<&str> for CreateTxg {
@@ -76,17 +84,17 @@ impl From<&str> for CreateTxg {
 
 impl Borrow<str> for CreateTxg {
     fn borrow(&self) -> &str {
-        self.s
+        &self.s
     }
 }
 
 impl AsRef<str> for CreateTxg {
     fn as_ref(&self) -> &str {
-        self.s
+        &self.s
     }
 }
 
-#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone,Debug)]
+#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone)]
 struct Guid {
     s: String
 }
@@ -97,15 +105,21 @@ impl From<&str> for Guid {
     }
 }
 
+impl From<String> for Guid {
+    fn from(s: String) -> Self {
+        Guid { s: s }
+    }
+}
+
 impl Borrow<str> for Guid {
     fn borrow(&self) -> &str {
-        self.s
+        &self.s
     }
 }
 
 impl AsRef<str> for Guid {
     fn as_ref(&self) -> &str {
-        self.s
+        &self.s
     }
 }
 
@@ -134,7 +148,7 @@ fn main() {
             .arg(Arg::with_name("DEST_DATASET")
                  .index(2)
                  .required(true)
-         q       )
+                 )
             ).get_matches();
 
 
@@ -203,7 +217,7 @@ fn main() {
                 let ds = Dataset {
                     guid: Guid::from(guid),
                     ds: SubDataset {
-                        type_: DatasetType::try_from(type_),
+                        type_: DatasetType::try_from(type_).unwrap(),
                         name: name.to_owned(),
                         createtxg: CreateTxg::from(createtxg),
                     }
@@ -245,7 +259,7 @@ fn main() {
         //  to have further ordering? Should we include the timestamp here?
         for src_ds in src_dss.drain() {
             let dst = dst_guid_map.remove(&src_ds.guid).map(|x| x.ds);
-            let k = (src_ds.createtxg.clone(), src_ds.guid.clone())
+            let k = (src_ds.createtxg.clone(), src_ds.guid.clone());
             match merged_dss.insert(k,
                     GlobalDataset {
                         guid: src_ds.guid,
@@ -256,7 +270,7 @@ fn main() {
                 Some(x) => {
                     // continue in a duplicate key case, but warn. This should never happen due to
                     // our use of the guid as a piece of the key.
-                    eprintln!("WARNING: duplicate key: {?!}", x)
+                    eprintln!("WARNING: duplicate key: {:?}", x)
                 },
                 None => {},
             }
@@ -277,7 +291,7 @@ fn main() {
                     if ds.src.type_ == DatasetType::Bookmark {
                         // bookmarks can't be sent, they can only be used as the basis for an
                         // incirmental send. skip.
-                        continue
+                        continue;
                     }
 
                     // send it
@@ -286,7 +300,7 @@ fn main() {
 
                     // use as prev after send/recv finishes
                 },
-                Some(x) {
+                Some(x) => {
                     // no transfer needed
                     // let's just us it as a prev
                 }
