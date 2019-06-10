@@ -6,6 +6,8 @@ extern crate enumflags2;
 #[macro_use]
 extern crate enumflags2_derive;
 
+extern crate shell_words;
+
 use enumflags2::BitFlags;
 use std::ops::{Deref,DerefMut};
 use std::path::{Path,PathBuf};
@@ -18,7 +20,8 @@ mod zpool;
 
 #[derive(Debug,PartialEq,Eq,Clone)]
 pub struct Zfs {
-    zfs_cmd: PathBuf,
+    // FIXME: we require utf-8 here
+    zfs_cmd: Vec<String>,
 }
 
 #[derive(Debug,PartialEq,Eq,Clone)]
@@ -246,7 +249,9 @@ impl Zfs {
 
     fn cmd(&self) -> process::Command
     {
-        process::Command::new(&self.zfs_cmd)
+        let mut cmd = process::Command::new(&self.zfs_cmd[0]);
+        cmd.args(&self.zfs_cmd[1..]);
+        cmd
     }
 
     fn cmdinfo_to_error(cmd_info: CmdInfo) -> ZfsError
@@ -255,13 +260,10 @@ impl Zfs {
         // status: ExitStatus(ExitStatus(256)), stderr: "cannot open \'innerpool/TMP/zoop-test-28239/dst/sub_ds\': dataset does not exist\n"
         let prefix_ca = "cannot open '";
         if cmd_info.stderr.starts_with(prefix_ca) {
-            let ds_rest = &cmd_info.stderr[prefix_ca.len()..];
+            let ds_rest = &cmd_info.stderr[prefix_ca.len()..].to_owned();
             let mut s = ds_rest.split("': ");
-            eprintln!("ds_rest: {:?}", ds_rest);
             let ds = s.next().unwrap();
-            eprintln!("ds: {:?}", ds);
             let error = s.next().unwrap();
-            eprintln!("error: {:?}", error);
             return match error {
                 "dataset does not exist\n" => {
                     ZfsError::NoDataset {
@@ -396,8 +398,12 @@ impl Zfs {
             None => env::var_os("ZFS_CMD").unwrap_or(OsStr::new("zfs").to_owned()),
         };
 
+        let env = env.to_str().expect("env is not utf-8");
+
+        let zfs_cmd = shell_words::split(env).expect("failed to split words");
+
         Zfs {
-            zfs_cmd: From::from(env),
+            zfs_cmd: zfs_cmd,
         }
     }
 
@@ -671,7 +677,7 @@ pub enum SendFlags {
 impl Default for Zfs {
     fn default() -> Self {
         Zfs {
-            zfs_cmd: From::from(env::var_os("ZFS_CMD").unwrap_or(OsStr::new("zfs").to_owned())),
+            zfs_cmd: vec![env::var_os("ZFS_CMD").unwrap_or(OsStr::new("zfs").to_owned()).to_str().unwrap().to_owned()],
         }
     }
 }

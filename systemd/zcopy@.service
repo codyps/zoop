@@ -1,0 +1,4 @@
+[Service]
+EnvironmentFile=/etc/sysconfig/zcopy-%i
+Type=oneshot
+ExecStart=/usr/bin/zoop zcopy -r $SRC_DATASET $DST_DATASET
