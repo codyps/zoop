@@ -96,8 +96,6 @@ impl ZfsList {
 
 impl<'a> From<&'a ZfsList> for Vec<Vec<String>> {
     fn from(x: &'a ZfsList) -> Self {
-        // key is first item, remaining items are placed in their own vectors
-        
         let mut h = Vec::default();
 
         for i in x.iter() {
@@ -407,17 +405,39 @@ impl Zfs {
         }
     }
 
-    /*
     /// Resume sending a stream using `receive_resume_token` from the destination filesystem
     ///
     /// flags here is constrained to `[Penv]`
-    pub fn send_resume(&self, receive_resume_token: String, flags: SendFlags) -> ZfsSend
+    pub fn send_resume(&self, receive_resume_token: &str, flags: BitFlags<SendFlags>) -> io::Result<ZfsSend>
     {
+        let mut cmd = self.cmd();
 
+        cmd.arg("send");
+
+        let mut opts = "-".to_owned();
+
+        for flag in flags.iter() {
+            match flag {
+                SendFlags::IncludeProps => { opts.push('P') },
+                SendFlags::EmbedData => { opts.push('e') },
+                SendFlags::Verbose => { opts.push('v') },
+                SendFlags::DryRun => { opts.push('n') },
+                _ => { panic!("unsupported flag: {:?}", flag); }
+            }
+        }
+
+        cmd.arg("-t").arg(receive_resume_token);
+
+        eprintln!("run: {:?}", cmd);
+
+        Ok(ZfsSend {
+            child: cmd
+                .stdout(std::process::Stdio::piped())
+                .spawn()?
+        })
     }
 
     //pub fn recv_abort_incomplete(&self)
-    */
 
     pub fn send(&self, snapname: &str, from: Option<&str>, flags: BitFlags<SendFlags>) -> io::Result<ZfsSend>
     {
