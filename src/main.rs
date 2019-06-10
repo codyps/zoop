@@ -23,7 +23,7 @@ extern crate fmt_extra;
 extern crate enumflags2;
 
 use enumflags2::BitFlags;
-use zfs_cmd_api::Zfs;
+use zfs_cmd_api::{Zfs, ZfsError, ZfsList};
 use clap::{Arg,SubCommand,AppSettings};
 use std::collections::BTreeMap;
 use std::borrow::Borrow;
@@ -143,11 +143,39 @@ impl<T> Iterator for DrainBTreeMap<T> {
 }
 */
 
-fn zcopy_one(dry_run: bool, verbose: bool, src_dataset: &str, dest_dataset: &str)
+fn zcopy_recursive(src_zfs: &Zfs, dest_zfs: &Zfs, dry_run: bool, verbose: bool, src_dataset: &str, dest_dataset: &str)
 {
-    let src_zfs = Zfs::from_env_prefix("SRC");
-    let dest_zfs = Zfs::from_env_prefix("DEST");
+    // XXX: consider if it would be useful to obtain additional info other than name here.
+    // XXX: should we match up these src filesystems with dest filesystems?
+    let mut enum_ds = zfs_cmd_api::ListBuilder::default();
+    enum_ds.include_filesystems()
+        .recursive()
+        .with_elements(vec!["name"])
+        .with_dataset(src_dataset);
 
+    let dss = src_zfs.list_from_builder(&enum_ds)
+        .expect("could not enumerate decendent filesystems");
+
+    // XXX: consider the ordering of this iteration
+    for this_src_ds in dss.iter() {
+        // XXX: consider if ds names are allowed to be non-utf8
+        let this_src_ds = std::str::from_utf8(this_src_ds).unwrap();
+
+        // form a `dest` based on `src_dataset`, `ds`, and `dest_dataset`
+        // basically: remove the `src_dataset` prefix on `ds` and append it to `dest_dataset`
+        assert!(this_src_ds.starts_with(src_dataset));
+
+        let ds_suffix = &this_src_ds[src_dataset.len()..];
+        let this_dest_ds = format!("{}{}", dest_dataset, ds_suffix);
+
+        eprintln!("zcopy: {} to {}", this_src_ds, this_dest_ds);
+
+        zcopy_one(src_zfs, dest_zfs, dry_run, verbose, this_src_ds, this_dest_ds.as_ref());
+    }
+}
+
+fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, dry_run: bool, verbose: bool, src_dataset: &str, dest_dataset: &str)
+{
     let mut list_builder = zfs_cmd_api::ListBuilder::default();
     list_builder.include_snapshots()
         .depth(1)
@@ -178,9 +206,11 @@ fn zcopy_one(dry_run: bool, verbose: bool, src_dataset: &str, dest_dataset: &str
     let src_list =
         src_zfs.list_from_builder(list_builder.clone().include_bookmarks().with_dataset(src_dataset))
         .expect("src list failed");
-    let dst_list = dest_zfs.list_from_builder(list_builder.clone().with_dataset(dest_dataset))
-        .expect("dst list failed");
-
+    let dst_list = match dest_zfs.list_from_builder(list_builder.clone().with_dataset(dest_dataset)) {
+        Ok(v) => v,
+        Err(ZfsError::NoDataset{..}) => ZfsList::default(),
+        Err(e) => panic!("dst list failed: {}", e),
+    };
 
     fn to_datasets(list_vecs: Vec<Vec<String>>) ->
         Vec<Dataset>
@@ -368,7 +398,7 @@ fn main() {
         .setting(AppSettings::SubcommandRequired)
         .subcommand(SubCommand::with_name("zcopy")
             .arg(Arg::with_name("recursive")
-                 .short("R")
+                 .short("r")
                  .help("Also examine datasets the decend from the specified dataset")
                  )
             .arg(Arg::with_name("SRC_DATASET")
@@ -380,6 +410,7 @@ fn main() {
                  .required(true)
                  )
         // convert snapshots that were transfered to bookmarks
+        //  use `guid` to determine those already replicated
         // subcommand(SubCommand::with_name("forget-replicated")
         //
         // create new snapshot(s)
@@ -401,11 +432,18 @@ fn main() {
         let recursive = matches.occurrences_of("recursive") > 0;
 
         let dry_run = matches.occurrences_of("dry-run") > 0 || dry_run;
+        let src_zfs = Zfs::from_env_prefix("SRC");
+        let dest_zfs = Zfs::from_env_prefix("DEST");
+
 
         println!("copy from {} to {} (recursive={})", src_dataset, dest_dataset, recursive);
         println!("dry_run: {}", dry_run);
 
-        zcopy_one(dry_run, verbose, src_dataset, dest_dataset);
+        if recursive {
+            zcopy_recursive(&src_zfs, &dest_zfs, dry_run, verbose, src_dataset, dest_dataset);
+        } else {
+            zcopy_one(&src_zfs, &dest_zfs, dry_run, verbose, src_dataset, dest_dataset);
+        }
     } else {
         println!("need a SubCommand");
     }

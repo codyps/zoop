@@ -9,6 +9,29 @@ if [ $# -ne 1 ]; then
 	exit 1
 fi
 
+error_count=0
+test_count=0
+
+ok1() {
+	local msg=$1
+	shift
+	: $((test_count=test_count+1))
+	if "$@"; then
+		>&2 echo "ok     - $msg ($*)"
+	else
+		>&2 echo "not ok - $msg ($*)"
+		: $((error_count=error_count+1))
+	fi
+}
+
+exit_status() {
+	if [ "$error_count" -gt 0 ]; then
+		>&2 echo "# failed: $error_count errors, $test_count tests"
+		exit 1
+	fi
+	exit
+}
+
 ZOOP_TEST_DS="$1-$$"
 
 : ${ZOOP:=target/debug/zoop}
@@ -22,7 +45,7 @@ cleanup() {
 		return	
 	fi
 	if $zoop_test_ds && [ -n "$ZOOP_TEST_DS" ]; then
-		zfs destroy -vrf "$ZOOP_TEST_DS"
+		zfs destroy -rf "$ZOOP_TEST_DS"
 	fi
 }
 trap cleanup EXIT
@@ -32,6 +55,7 @@ zoop_test_ds=true
 
 
 SRC_PATH="$ZOOP_TEST_PATH/src"
+DST_PATH="$ZOOP_TEST_PATH/dst"
 
 SRC_DS="$ZOOP_TEST_DS/src"
 DST_DS="$ZOOP_TEST_DS/dst"
@@ -69,3 +93,30 @@ for i in $(seq 40 44); do
 done
 
 "$ZOOP" zcopy -v "$SRC_DS" "$DST_DS"
+
+zfs create "$SRC_DS/sub_ds"
+
+snaps() {
+	local sub=""
+	if [ $# -eq 3 ]; then
+		sub="/$3"
+	fi
+	for i in $(seq $1 $2); do
+		touch "$SRC_PATH$sub/$i"
+		zfs snapshot "$SRC_DS$sub@$i"
+	done
+}
+
+snaps 10 15 sub_ds
+
+"$ZOOP" zcopy -v "$SRC_DS" "$DST_DS"
+
+
+ok1 "non-recursive does not recurse" test ! -f "$DST_PATH/sub_ds/10"
+
+"$ZOOP" zcopy -vr "$SRC_DS" "$DST_DS"
+
+ok1 "recusive does R"       zfs list -Hp "$DST_DS/sub_ds"
+ok1 "recusive does recurse" test -f "$DST_PATH/sub_ds/10"
+
+exit_status

@@ -29,6 +29,14 @@ pub enum ListTypes {
     Bookmark,
 }
 
+#[derive(Debug)]
+pub struct CmdInfo {
+    status: process::ExitStatus,
+    stderr: String,
+    cmd: String,
+}
+
+
 #[derive(Debug,Fail)]
 pub enum ZfsError {
     #[fail(display = "execution of zfs command failed: {}", io)]
@@ -36,11 +44,21 @@ pub enum ZfsError {
         io: io::Error
     },
 
-    #[fail(display = "zfs command returned an error: {}: {:?}: {:?}", status, stderr, cmd)]
+    #[fail(display = "zfs command returned an error: {:?}", cmd_info)]
     Process {
-        status: process::ExitStatus,
-        stderr: String,
-        cmd: String,
+        cmd_info: CmdInfo,
+    },
+
+    // A specific CannotOpen kind
+    #[fail(display = "no such dataset '{}' ({:?})", dataset, cmd_info)]
+    NoDataset {
+        dataset: String,
+        cmd_info: CmdInfo,
+    },
+
+    #[fail(display = "cannot open: {:?}", cmd_info)]
+    CannotOpen {
+        cmd_info: CmdInfo,
     },
 }
 
@@ -57,6 +75,12 @@ impl fmt::Display for ZfsList {
             write!(fmt, "{},", fmt_extra::AsciiStr(i))?;
         }
         write!(fmt, "]")
+    }
+}
+
+impl Default for ZfsList {
+    fn default() -> Self {
+        ZfsList { out: Vec::new() }
     }
 }
 
@@ -225,6 +249,40 @@ impl Zfs {
         process::Command::new(&self.zfs_cmd)
     }
 
+    fn cmdinfo_to_error(cmd_info: CmdInfo) -> ZfsError
+    {
+
+        // status: ExitStatus(ExitStatus(256)), stderr: "cannot open \'innerpool/TMP/zoop-test-28239/dst/sub_ds\': dataset does not exist\n"
+        let prefix_ca = "cannot open '";
+        if cmd_info.stderr.starts_with(prefix_ca) {
+            let ds_rest = &cmd_info.stderr[prefix_ca.len()..];
+            let mut s = ds_rest.split("': ");
+            eprintln!("ds_rest: {:?}", ds_rest);
+            let ds = s.next().unwrap();
+            eprintln!("ds: {:?}", ds);
+            let error = s.next().unwrap();
+            eprintln!("error: {:?}", error);
+            return match error {
+                "dataset does not exist\n" => {
+                    ZfsError::NoDataset {
+                        dataset: ds.to_owned(),
+                        cmd_info: cmd_info,
+                    }
+                },
+                _ => {
+                    ZfsError::CannotOpen {
+                        cmd_info: cmd_info,
+                    }
+                }
+            };
+        }
+
+        // generic error
+        ZfsError::Process {
+            cmd_info: cmd_info,
+        }
+    }
+
     pub fn list_from_builder(&self, builder: &ListBuilder) -> Result<ZfsList, ZfsError>
     {
         // zfs list -H
@@ -288,16 +346,19 @@ impl Zfs {
         let output = cmd.output().map_err(|e| ZfsError::Exec{ io: e})?;
 
         if !output.status.success() {
-            println!("status: {}", output.status);
-            return Err(ZfsError::Process {
+            let stderr = String::from_utf8_lossy(&output.stderr[..]).into_owned();
+
+            let cmd_info = CmdInfo {
                 status: output.status,
-                stderr: String::from_utf8_lossy(&output.stderr[..]).into_owned(),
+                stderr: stderr,
                 cmd: format!("{:?}", cmd),
-            });
+            };
+
+            return Err(Self::cmdinfo_to_error(cmd_info))
         }
 
         if output.stderr.len() > 0 {
-            println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+            eprintln!("stderr: {}", String::from_utf8_lossy(&output.stderr));
         }
 
         Ok(ZfsList { out: output.stdout })
