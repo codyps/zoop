@@ -143,7 +143,24 @@ impl<T> Iterator for DrainBTreeMap<T> {
 }
 */
 
-fn zcopy_recursive(src_zfs: &Zfs, dest_zfs: &Zfs, dry_run: bool, verbose: bool, src_dataset: &str, dest_dataset: &str)
+#[derive(Debug)]
+struct ZcopyOpts {
+    dry_run: bool,
+    verbose: bool,
+    resumable: bool,
+}
+
+impl Default for ZcopyOpts {
+    fn default() -> Self {
+        Self {
+            dry_run: false,
+            verbose: false,
+            resumable: true,
+        }
+    }
+}
+
+fn zcopy_recursive(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &str, dest_dataset: &str)
 {
     // XXX: consider if it would be useful to obtain additional info other than name here.
     // XXX: should we match up these src filesystems with dest filesystems?
@@ -170,11 +187,11 @@ fn zcopy_recursive(src_zfs: &Zfs, dest_zfs: &Zfs, dry_run: bool, verbose: bool, 
 
         eprintln!("zcopy: {} to {}", this_src_ds, this_dest_ds);
 
-        zcopy_one(src_zfs, dest_zfs, dry_run, verbose, this_src_ds, this_dest_ds.as_ref());
+        zcopy_one(src_zfs, dest_zfs, opts, this_src_ds, this_dest_ds.as_ref());
     }
 }
 
-fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, dry_run: bool, verbose: bool, src_dataset: &str, dest_dataset: &str)
+fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &str, dest_dataset: &str)
 {
     let mut get_receive_resume_token = zfs_cmd_api::ListBuilder::default();
     get_receive_resume_token.include_filesystems()
@@ -185,6 +202,26 @@ fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, dry_run: bool, verbose: bool, src_da
     list_builder.include_snapshots()
         .depth(1)
         .with_elements(vec!["createtxg", "name", "guid", "type"]);
+
+    // flags for both resume and normal send/recv
+    let mut send_flags = zfs_cmd_api::SendFlags::EmbedData
+        | zfs_cmd_api::SendFlags::Compressed
+        | zfs_cmd_api::SendFlags::LargeBlock
+        | zfs_cmd_api::SendFlags::Raw;
+    let mut recv_flags = BitFlags::default() | zfs_cmd_api::RecvFlags::Force;
+    if opts.resumable {
+        recv_flags |= zfs_cmd_api::RecvFlags::Resumeable;
+    }
+
+    if opts.dry_run {
+        // XXX: consider performing a send dry run (optionally) instead, omitting
+        // the recv altogether.
+        recv_flags |= zfs_cmd_api::RecvFlags::DryRun;
+    }
+    if opts.verbose {
+        recv_flags |= zfs_cmd_api::RecvFlags::Verbose;
+        send_flags |= zfs_cmd_api::SendFlags::Verbose;
+    }
 
     // - dest will contain some or none of snapshots/bookmarks in source
     // - dest may have previously recieved but later deleted some snapshots
@@ -203,50 +240,43 @@ fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, dry_run: bool, verbose: bool, src_da
     // Problems:
     //  - need to transfer and manage entire list of snapshots. Will this grow too large?
 
-    // check for resume, and resume before doing the rest of our work
-    match dest_zfs.list_from_builder(&get_receive_resume_token) {
-        Ok(v) => {
-            let res: Vec<Vec<String>> = From::from(&v);
-            assert_eq!(res.len(), 1);
-            let res = &res[0];
-            assert_eq!(res.len(), 1);
-            let res = &res[0];
-            if res == "-" {
-                // nada
-                if verbose {
-                    eprintln!("No recv resume, skip to normal transfer");
-                }
-            } else {
-                eprintln!("Resuming partial recv in {}", dest_dataset);
-                // we have a resume token
-                let mut send_flags = BitFlags::<>::default() | zfs_cmd_api::SendFlags::EmbedData;
-                let mut recv_flags = zfs_cmd_api::RecvFlags::Resumeable
-                    | zfs_cmd_api::RecvFlags::Force;
+    if opts.resumable {
+        // check for resume, and resume before doing the rest of our work
+        match dest_zfs.list_from_builder(&get_receive_resume_token) {
+            Ok(v) => {
+                let res: Vec<Vec<String>> = From::from(&v);
+                assert_eq!(res.len(), 1);
+                let res = &res[0];
+                assert_eq!(res.len(), 1);
+                let res = &res[0];
+                if res == "-" {
+                    // nada
+                    if opts.verbose {
+                        eprintln!("No recv resume, skip to normal transfer");
+                    }
+                } else {
+                    eprintln!("Resuming partial recv in {}", dest_dataset);
 
-                if dry_run {
-                    // XXX: consider performing a send dry run (optionally) instead, omitting
-                    // the recv altogether.
-                    recv_flags |= zfs_cmd_api::RecvFlags::DryRun;
-                }
-                if verbose {
-                    recv_flags |= zfs_cmd_api::RecvFlags::Verbose;
-                    send_flags |= zfs_cmd_api::SendFlags::Verbose;
-                }
+                    let send = src_zfs.send_resume(res, send_flags).unwrap();
+                    let recv = dest_zfs.recv(dest_dataset, Vec::new(), None, Vec::new(), recv_flags).unwrap();
 
-                let send = src_zfs.send_resume(res, send_flags).unwrap();
-                let recv = dest_zfs.recv(dest_dataset, Vec::new(), None, Vec::new(), recv_flags).unwrap();
-
-                zfs_cmd_api::send_recv(send, recv).unwrap();
-            }
-        },
-        Err(ZfsError::NoDataset{..}) => {
-            if verbose {
-                eprintln!("filesystem {} does not exist, not resuming", dest_dataset);
-            }
-        },
-        Err(e) => panic!("dst list failed: {}", e),
+                    // neither src nor dst are encrypted, but the error:
+                    // > zoop[102113]: cannot receive incremental stream:
+                    // > incompatible embedded data stream feature with encrypted receive
+                    // is emitted during a recv of a resumed send.
+                    //
+                    // seems plausible that we've got something not-quite-right going on.
+                    zfs_cmd_api::send_recv(send, recv).unwrap();
+                }
+            },
+            Err(ZfsError::NoDataset{..}) => {
+                if opts.verbose {
+                    eprintln!("filesystem {} does not exist, not resuming", dest_dataset);
+                }
+            },
+            Err(e) => panic!("dst list failed: {}", e),
+        }
     }
-
 
     // NOTE: we only get bookmarks for `src` because they aren't useful on the dst
     //
@@ -345,11 +375,10 @@ fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, dry_run: bool, verbose: bool, src_da
     //    bookmark
     //
     //  - Use the previous GlobalDataset as the basis for the incremental send
-
     
     let mut prev_dst_ds: Option<String> = None;
     for (_, ds) in merged_dss.into_iter() {
-        if verbose {
+        if opts.verbose {
             eprintln!("examine: {:?}", ds);
         }
 
@@ -364,21 +393,6 @@ fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, dry_run: bool, verbose: bool, src_da
                 // send it
                 //
                 // NEED send|recv (pipe) API in zfs-cmd-api
-                let mut send_flags = zfs_cmd_api::SendFlags::LargeBlock
-                    | zfs_cmd_api::SendFlags::EmbedData
-                    | zfs_cmd_api::SendFlags::Compressed;
-                let mut recv_flags = zfs_cmd_api::RecvFlags::Resumeable
-                    | zfs_cmd_api::RecvFlags::Force;
-
-                if dry_run {
-                    // xxx: consider performing a send dry run (optionally) instead, omitting
-                    // the recv altogether.
-                    recv_flags |= zfs_cmd_api::RecvFlags::DryRun;
-                }
-                if verbose {
-                    recv_flags |= zfs_cmd_api::RecvFlags::Verbose;
-                    send_flags |= zfs_cmd_api::SendFlags::Verbose;
-                }
 
                 let send = src_zfs.send(&ds.src.name[..], prev_dst_ds.as_ref().map(|x| &**x), send_flags).unwrap();
                 let recv = dest_zfs.recv(dest_dataset, Vec::new(), None, Vec::new(), recv_flags).unwrap();
@@ -432,7 +446,6 @@ fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, dry_run: bool, verbose: bool, src_da
 const CARGO_TOML: &'static str = include_str!("../Cargo.toml");
 
 fn main() {
-
     let matches = app_from_crate!()
         .arg(Arg::with_name("dry-run")
              .help("Do not execute anything which would change system state. Print what would state would be changed")
@@ -449,6 +462,10 @@ fn main() {
             .arg(Arg::with_name("recursive")
                  .short("r")
                  .help("Also examine datasets the decend from the specified dataset")
+                 )
+            .arg(Arg::with_name("not-resumeable")
+                 .short("Y")
+                 .help("Do not enable resumable send/recv when receiving")
                  )
             .arg(Arg::with_name("SRC_DATASET")
                  .index(1)
@@ -472,7 +489,13 @@ fn main() {
 
     let dry_run = matches.occurrences_of("dry-run") > 0;
     let verbose = matches.occurrences_of("verbose") > 0;
+    let not_resumable = matches.occurrences_of("not-resumable") > 0;
 
+    let opts = ZcopyOpts {
+        dry_run: dry_run,
+        verbose: verbose,
+        resumable: !not_resumable,
+    };
 
     if let Some(matches) = matches.subcommand_matches("zcopy") {
         let src_dataset = matches.value_of("SRC_DATASET").unwrap();
@@ -489,9 +512,9 @@ fn main() {
         println!("dry_run: {}", dry_run);
 
         if recursive {
-            zcopy_recursive(&src_zfs, &dest_zfs, dry_run, verbose, src_dataset, dest_dataset);
+            zcopy_recursive(&src_zfs, &dest_zfs, &opts, src_dataset, dest_dataset);
         } else {
-            zcopy_one(&src_zfs, &dest_zfs, dry_run, verbose, src_dataset, dest_dataset);
+            zcopy_one(&src_zfs, &dest_zfs, &opts, src_dataset, dest_dataset);
         }
     } else {
         println!("need a SubCommand");

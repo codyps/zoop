@@ -416,12 +416,24 @@ impl Zfs {
 
         let mut opts = "-".to_owned();
 
+        // forbidden flags:
+        //  - `replicate`: `-R`
+        //  - `props`: `-p`
+        //  - `backup`: `-b`
+        //  - `dedup`: `-D`
+        //  - `holds`: `-h`
+        //  - `redactbook`: `-d` `arg`
+
         for flag in flags.iter() {
             match flag {
-                SendFlags::IncludeProps => { opts.push('P') },
+                SendFlags::LargeBlock => { opts.push('L') },
                 SendFlags::EmbedData => { opts.push('e') },
+                SendFlags::Compressed => { opts.push('c') },
+                SendFlags::Raw => { opts.push('w') },
+
                 SendFlags::Verbose => { opts.push('v') },
                 SendFlags::DryRun => { opts.push('n') },
+                SendFlags::Parsable => { opts.push('P') },
                 _ => { panic!("unsupported flag: {:?}", flag); }
             }
         }
@@ -464,7 +476,7 @@ impl Zfs {
                     include_intermediary = true
                 },
                 SendFlags::IncludeHolds => { opts.push('h') },
-                SendFlags::IncludeProps => { opts.push('P') },
+                SendFlags::IncludeProps => { opts.push('p') },
                 SendFlags::Verbose => { opts.push('v') },
                 SendFlags::DryRun => { opts.push('n') },
                 SendFlags::Parsable => { opts.push('P') },
@@ -574,6 +586,8 @@ pub struct ZfsRecv {
 
 pub fn send_recv(mut send: ZfsSend, mut recv: ZfsRecv) -> io::Result<u64>
 {
+    // XXX: It woudl be _really_ nice to be able to consume stderr from both send & recv into our
+    // own data to examine. right now we have to guess about the error cause.
     let bytes = std::io::copy(send.child.stdout.as_mut().unwrap(), recv.child.stdin.as_mut().unwrap())?;
 
     // discard the stdin/stdout we left open
