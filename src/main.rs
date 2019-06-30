@@ -467,6 +467,12 @@ fn main() {
                  .short("Y")
                  .help("Do not enable resumable send/recv when receiving")
                  )
+            // this matches zxfer style behavior
+            /*
+            .arg(Arg::with_name("preseve-path")
+                 .short("P")
+                 .help("Rather than using DEST_DATASET as the dest, place SRC_DATASET (the entire path) under DEST_DATASET")
+            */
             .arg(Arg::with_name("SRC_DATASET")
                  .index(1)
                  .required(true)
@@ -475,6 +481,22 @@ fn main() {
                  .index(2)
                  .required(true)
                  )
+        /*
+        .subcommand(SubCommand::with_name("zcopy-all")
+            .arg(Arg::with_name("not-resumeable")
+                 .short("Y")
+                 .help("Do not enable resumable send/recv when receiving")
+                 )
+            .arg(Arg::with_name("DEST_DATASET")
+                 .index(1)
+                 .required(true)
+                 )
+        .subcommand(SubCommand::with_name("trim-by-time")
+            .arg(Arg::with_name("DATASET")
+                 .index(1)
+                 .required(true)
+                 )
+        */
         // convert snapshots that were transfered to bookmarks
         //  use `guid` to determine those already replicated
         // subcommand(SubCommand::with_name("forget-replicated")
