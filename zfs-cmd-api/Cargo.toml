@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Cody P Schafer <dev@codyps.com>"]
 license = "AGPL-3"
 description = "Interact with zfs via the supported cmd line tools"
-documentation = "docs.rs/zfs-cmd-api"
+documentation = "https://docs.rs/zfs-cmd-api"
 repository = "https://github.com/jmesmon/zoop"
 
 [dependencies]
