@@ -4,10 +4,10 @@ version = "0.1.0"
 authors = ["Cody P Schafer <dev@codyps.com>"]
 
 [dependencies]
-failure = "*"
-failure_derive = "*"
-fmt-extra = "*"
-bitflags = "*"
-enumflags2 = "^0.5"
-enumflags2_derive = "^0.5"
-shell-words = "0.1"
+failure = "0.1.5"
+failure_derive = "0.1.5"
+fmt-extra = "0.2.1"
+bitflags = "1.1.0"
+enumflags2 = "0.5.2"
+enumflags2_derive = "0.5.0"
+shell-words = "0.1.0"
