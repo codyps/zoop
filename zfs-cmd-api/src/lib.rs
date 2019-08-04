@@ -200,8 +200,8 @@ impl ListBuilder {
         self
     }
 
-    pub fn with_elements(&mut self, mut elements: Vec<&'static str>) -> &mut Self {
-        self.elements.append(&mut elements);
+    pub fn with_elements(&mut self, mut elements: &[&'static str]) -> &mut Self {
+        self.elements.extend_from_slice(&mut elements);
         self
     }
 

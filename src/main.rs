@@ -167,7 +167,7 @@ fn zcopy_recursive(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset:
     let mut enum_ds = zfs_cmd_api::ListBuilder::default();
     enum_ds.include_filesystems()
         .recursive()
-        .with_elements(vec!["name"])
+        .with_elements(&["name"])
         .with_dataset(src_dataset);
 
     let dss = src_zfs.list_from_builder(&enum_ds)
@@ -195,13 +195,13 @@ fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &str,
 {
     let mut get_receive_resume_token = zfs_cmd_api::ListBuilder::default();
     get_receive_resume_token.include_filesystems()
-        .with_elements(vec!["receive_resume_token"])
+        .with_elements(&["receive_resume_token"])
         .with_dataset(dest_dataset);
 
     let mut list_builder = zfs_cmd_api::ListBuilder::default();
     list_builder.include_snapshots()
         .depth(1)
-        .with_elements(vec!["createtxg", "name", "guid", "type"]);
+        .with_elements(&["createtxg", "name", "guid", "type"]);
 
     // flags for both resume and normal send/recv
     let mut send_flags = zfs_cmd_api::SendFlags::EmbedData
