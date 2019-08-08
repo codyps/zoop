@@ -30,7 +30,7 @@ truncate --size 1G "$tmpdir/zdev2.img"
 pool_suffix="$RANDOM"
 new_pool() {
 	name="zoop-test-$pool_suffix-$1"
-	zpool create "$name" "$2"
+	zpool create "$name" "$2" -O "mountpoint=$tmpdir/$name"
 	echo "$name"
 }
 
@@ -45,3 +45,12 @@ zfs send "${zpool1}@snap-1" | zfs recv -F "${zpool2}/sub"
 
 zfs get all "${zpool1}@snap-1" >zpool1_snap1.prop
 zfs get all "${zpool2}/sub@snap-1" >zpool2_sub_snap1.prop
+
+touch "$tmpdir/$zpool1/2"
+zfs snapshot "${zpool1}@snap-2"
+zfs send -i "${zpool1}@snap-1" "${zpool1}@snap-2" | zfs recv -F "${zpool2}/sub"
+
+touch "$tmpdir/$zpool1/3"
+zfs snapshot "${zpool1}@snap-3"
+zfs destroy "${zpool1}@snap-2"
+zfs send -i "${zpool1}@snap-1" "${zpool1}@snap-3" | zfs recv -F "${zpool2}/sub"
