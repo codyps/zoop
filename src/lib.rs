@@ -254,7 +254,7 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
                     eprintln!("Resuming partial recv in {}", dest_dataset);
 
                     let send = src_zfs.send_resume(res, send_flags).unwrap();
-                    let recv = dest_zfs.recv(dest_dataset, Vec::new(), None, Vec::new(), recv_flags).unwrap();
+                    let recv = dest_zfs.recv(dest_dataset, &[], None, &[], recv_flags).unwrap();
 
                     // neither src nor dst are encrypted, but the error:
                     // > zoop[102113]: cannot receive incremental stream:
