@@ -518,7 +518,7 @@ impl Zfs {
     // boolean), `lzc_receive_with_reader()` then exposes an additional `resumable` boolean (but
     // also provides a mechanism to pass in a `dmu_replay_record_t` which was read from the `fd`
     // prior to function invocation).
-    pub fn recv(&self, snapname: &str, set_props: Vec<(String,String)>, origin: Option<&str>,
+    pub fn recv(&self, snapname: &str, set_props: &[(&str,&str)], origin: Option<&str>,
         
         exclude_props: Vec<String>, flags: BitFlags<RecvFlags>) ->
         io::Result<ZfsRecv>
@@ -546,10 +546,11 @@ impl Zfs {
         cmd
             .arg(opts);
 
-        for set_prop in set_props.into_iter() {
-            let mut s = set_prop.0;
+        for set_prop in set_props.iter() {
+            let mut s = String::new();
+            s.push_str(set_prop.0);
             s.push('=');
-            s.push_str(&set_prop.1[..]);
+            s.push_str(set_prop.1);
             cmd.arg("-o").arg(s);
         }
 
