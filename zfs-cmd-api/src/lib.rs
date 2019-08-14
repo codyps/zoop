@@ -1,3 +1,6 @@
+
+#[macro_use] extern crate log;
+
 extern crate failure;
 extern crate fmt_extra;
 #[macro_use] extern crate failure_derive;
@@ -340,7 +343,7 @@ impl Zfs {
             }
         }
 
-        eprintln!("run: {:?}", cmd);
+        info!("run: {:?}", cmd);
 
         let output = cmd.output().map_err(|e| ZfsError::Exec{ io: e})?;
 
@@ -357,7 +360,7 @@ impl Zfs {
         }
 
         if output.stderr.len() > 0 {
-            eprintln!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+            warn!("stderr: {}", String::from_utf8_lossy(&output.stderr));
         }
 
         Ok(ZfsList { out: output.stdout })
@@ -439,7 +442,7 @@ impl Zfs {
 
         cmd.arg("-t").arg(receive_resume_token);
 
-        eprintln!("run: {:?}", cmd);
+        info!("run: {:?}", cmd);
 
         Ok(ZfsSend {
             child: cmd
@@ -502,7 +505,7 @@ impl Zfs {
 
         cmd.arg(snapname);
 
-        eprintln!("run: {:?}", cmd);
+        info!("run: {:?}", cmd);
 
         Ok(ZfsSend {
             child: cmd
@@ -518,11 +521,9 @@ impl Zfs {
     // boolean), `lzc_receive_with_reader()` then exposes an additional `resumable` boolean (but
     // also provides a mechanism to pass in a `dmu_replay_record_t` which was read from the `fd`
     // prior to function invocation).
-    pub fn recv<'a, S, D>(&self, snapname: &str, set_props: S, origin: Option<&str>,
-        exclude_props: D, flags: BitFlags<RecvFlags>) ->
+    pub fn recv(&self, snapname: &str, set_props: &[(&str, &str)], origin: Option<&str>,
+        exclude_props: &[&str], flags: BitFlags<RecvFlags>) ->
         io::Result<ZfsRecv>
-        where S: IntoIterator<Item=(&'a str, &'a str)>,
-              D: IntoIterator<Item=&'a str>
     {
         let mut cmd = self.cmd();
 
@@ -549,9 +550,9 @@ impl Zfs {
 
         for set_prop in set_props.into_iter() {
             let mut s = String::new();
-            s.push_str(set_prop.0);
+            s.push_str(set_prop.0.as_ref());
             s.push('=');
-            s.push_str(set_prop.1);
+            s.push_str(set_prop.1.as_ref());
             cmd.arg("-o").arg(s);
         }
 
@@ -565,7 +566,7 @@ impl Zfs {
         }
 
         cmd.arg(snapname);
-        eprintln!("run: {:?}", cmd);
+        info!("run: {:?}", cmd);
 
         Ok(ZfsRecv {
             child: cmd
