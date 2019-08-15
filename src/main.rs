@@ -1,3 +1,5 @@
+extern crate env_logger;
+
 #[macro_use]
 extern crate clap;
 
@@ -13,6 +15,9 @@ use clap::{Arg,SubCommand,AppSettings};
 const CARGO_TOML: &'static str = include_str!("../Cargo.toml");
 
 fn main() {
+    env_logger::builder()
+        .init();
+
     let matches = app_from_crate!()
         .arg(Arg::with_name("dry-run")
              .help("Do not execute anything which would change system state. Print what would state would be changed")

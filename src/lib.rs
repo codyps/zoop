@@ -15,6 +15,7 @@
 //  (and everything else)
 
 
+#[macro_use] extern crate log;
 extern crate zfs_cmd_api;
 extern crate fmt_extra;
 extern crate enumflags2;
@@ -236,6 +237,14 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
     // Problems:
     //  - need to transfer and manage entire list of snapshots. Will this grow too large?
 
+
+    // determine if dataset has a partial receive, and resume it before proceeding with
+    // normal incrimental send
+    //
+    // XXX: unclear what interaction (if any) this has with the destination having newer snapshots
+    //    that aren't present on the source (ie: if snapshot creation is enabled on the dest)
+    //    possible that we need to catch errors here, trigger snapshot deletion, and re-attempt
+    //    resume. Does zfs allow creation of a snapshot while a resume token exists?
     if opts.resumable {
         // check for resume, and resume before doing the rest of our work
         match dest_zfs.list_from_builder(&get_receive_resume_token) {
@@ -320,9 +329,6 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
     }
 
 
-    // TODO: determine if dataset has a partial receive, and resume it before proceeding with
-    // normal incrimental send
-
     let src_dss = to_datasets(From::from(&src_list));
     let dst_dss = to_datasets(From::from(&dst_list));
 
@@ -366,14 +372,160 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
         }
     }
 
+    // # `zfs-snapshot-recv-order`:
+    //
+    // zfs requires that snapshots be recv'd in the order they were created. In other words, if
+    // the destination lacks _intermediate_ snapshots found in the source, the destination will be
+    // unable to recv them without first deleting the snapshots which follow the missing snapshot.
+    //
+    // because of this, we have a few options:
+    //  1. do not attempt to transfer _intermediate_ snapshots on the source to the destination
+    //  2. perform a _lot_ of rollback, potentially losing data in the destination (by deleting
+    //    snapshots), and then exactly replicate the snapshots present in the source to the dest.
+    //  3. somehow recreate the dataset incrimentally using `dest` resources. unclear if this is
+    //     possible by using clones, etc. might be necessary to use multiple send/recvs which would
+    //     result in duplicate space usage while reconstruction is occuring.
+    //
+    // Issues to consider:
+    //
+    //  - our goal is to preserve the most data. deleting data ourselves (by rollback without
+    //    keeping old data, ie #2) feels like it goes against this.
+    //
+    //  - skipping transfering data from the source (#1) also seems somewhat against this, but less so.
+    //    Here we can consider that in typical operation, the case where this occurs (missing
+    //    intermediates on the dest) it meanas that we've purposfully trimmed the snapshots on the
+    //    destination, and no longer care to preserve them.
+    //
+    //  - that said, it would be useful to allow a "fill-in" type operation for the case where a
+    //    user error occurs and they desire to restore their deleted snapshots
+    //
+    //  - on #3: clones, when promoted, gain the snapshots of their parent that include/proceed
+    //    their source snapshot. The parent keeps all snapshots that follow the source snapshot.
+    //
+
+
+    // "kinds" of snapshots
+    //
+    //  A. exist on src and dest
+    //  B. only in dest with none of kind `A` _following_
+    //  C. only in dest with some of kind `A` _following_
+    //  D. only in src with none of kind `A` _following_
+    //  E. only in src with some of kind `A` _following_
+    //
+    //  `B` _can_ exist when snapshotting is performed on dest. If `B` exists, they can prevent
+    //  recv of addition snapshots from src to dest. Having a way to prevent backups from
+    //  continuing is bad, and it is desirable to prevent it.
+    //
+    //  `B` _can_ also exist when the source deletes some snapshots that were previously sent. We
+    //  _don't_ want to delete these on dest, as this would push the source retention policy onto
+    //  dest in some cases. dest should always be able to manage it's own retention policy.
+    //
+    //  `B` case 2 (source deletes snapshots):
+    //     - src: `@a`, `@b`, `@c`.
+    //     - send `@a` to dest.
+    //     - send `@b` to dest with `@a` as base.
+    //     - delete `@b` on src
+    //     - send `@c` to dest with `@a` as base.
+    //
+    //  Results in:
+    //      - with `-F`: dest: `@a`, `@c`
+    //      - without `-F`: recv fails, dest: `@a`, `@b`
+    //
+    //  `B` case 1 (dest creates snapshots):
+    //     - src: `@a`, `@b`.
+    //     - send `@a` to dest.
+    //     - create `@bp` on dest.
+    //     - send `@b` to dest with `@a` as base.
+    //
+    //  Results in:
+    //   - with `-F`: dest: `@a`, `@b`
+    //   - without `-F`: recv fails, dest: `@a`, `@bp`
+    //
+    //
+    // `C` _can_ exist when there is a snapshot deletion policy on the src that removes some
+    // snapshots. These are fine and have no effect on our transfers.
+    //
+    // `D` _can_ exits when the source creates snapshots. This is totally normal and needs no
+    // special handling.
+    //
+    // `E` _can_ exist when there is a snapshot deletion policy on the dest that removes some
+    // snapshots, which the src preserves those same snapshots.
+    //
+    // `E` case (dest removes snapshots)
+    //    - src: `@a`, `@b`, `@c`
+    //    - send `@a` to dest.
+    //    - send `@b` to dest with `@a` as base.
+    //    - send `@c` to dest with `@b` as base.
+    //    - delete `@b` on dest
+    //    - send `@b` to dest with `@a` as base.
+    //
+    // Results in:
+    //  - recv fails, "cannot receive incremental stream: destination %s has been modified since
+    //    most recent snapshot"
+    //  - discussed in `zfs-snapshot-recv-order` above.
+    //
+    // Solutions to `B`:
+    //  a. always `recv -F`, causing _both_ the source deleted & dest created snapshots to be lost
+    //  b. refuse to transfer in this case, causing source deleted & dest created snapshots to be
+    //    preserved, but all backups stop.
+    //  c. perform some fancy clone/promote to preserve snapshots (?)
+    //
+    // We currently do `a`. It may make sense to optionally allow `b` (easy). Figuring out `c` may
+    // be difficult.
+    // 
+    // Solutions to `E`:
+    //  - see `zfs-snapshot-recv-order`
+
+
+    // because of zfs recv ordering requirements, we currently skip over source snapshots that
+    // would be intermediate snapshots on the destination.
+    //
+    // we do this with a pre-processing of merged_dss discarding intermediate-in-dest items
+    let mut dss_iter = merged_dss.iter().rev();
+    let mut basis_key: Option<(CreateTxg,Guid)> = None;
+    loop {
+        // iterate backwards over `merged_dss`
+        // track when we first hit snapshot that exists in both src & dest
+        // after that, terminate when we hit a snapshot that only exists in src
+        // only consider the snapshots we've examined for transfer
+        match dss_iter.next() {
+            Some((k, ds)) => {
+                if ds.dst.is_some() {
+                    info!("basis found: {:?}", ds);
+                    basis_key = Some(k.clone());
+                    break;
+                } else {
+                    trace!("not a basis: {:?}", ds);
+                }
+            },
+            None => {
+                info!("no basis found");
+                break;
+            }
+        }
+    }
+
     // iterate over merged_dss
     //  - send incrimental for each GlobalDataset where `dst` is None and the src type is not a
     //    bookmark
     //
     //  - Use the previous GlobalDataset as the basis for the incremental send
-    
+    // XXX: ideally, we'd use `dss_iter.rev()` or similar here and just iterate back over the items.
+    // Unfortunately, rust's iterators are more like "streams" or "queues": once an element is
+    // emitted, it is never emitted again. "cursor"/"marker" iterators have been discussed at a few
+    // points [1][2][3], but no options appear presently avaliable on crates.io. So instead we
+    // perform an addition BTree lookup.
+    //
+    // 1: https://codeburst.io/my-journey-with-rust-in-2017-the-good-the-bad-the-weird-f07aa918f4f8?gi=cf14badb5d6c
+    // 2: https://stackoverflow.com/questions/38227722/iterating-forward-and-backward
+    // 3: https://internals.rust-lang.org/t/pseudo-rfc-cursors-reversible-iterators/386/5
+    let dss_iter = match basis_key {
+        Some(k) => merged_dss.range(k..),
+        None => merged_dss.range(..),
+    };
+
     let mut prev_dst_ds: Option<String> = None;
-    for (_, ds) in merged_dss.into_iter() {
+    for (_, ds) in dss_iter {
         if opts.verbose {
             eprintln!("examine: {:?}", ds);
         }
@@ -382,16 +534,18 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
             None => {
                 if ds.src.type_ == DatasetType::Bookmark {
                     // bookmarks can't be sent, they can only be used as the basis for an
-                    // incirmental send. skip.
+                    // incirmental send.
+                    //
+                    // This one can't be used as the basis for an incrimental send because the
+                    // destination doesn't have the corresponding snapshot.
+                    //
+                    // skip.
                     continue;
                 }
 
                 // send it
-                //
-                // NEED send|recv (pipe) API in zfs-cmd-api
-
                 let send = src_zfs.send(&ds.src.name[..], prev_dst_ds.as_ref().map(|x| &**x), send_flags).unwrap();
-                let recv = dest_zfs.recv(dest_dataset, Vec::new(), None, Vec::new(), recv_flags).unwrap();
+                let recv = dest_zfs.recv(dest_dataset, &[], None, &[], recv_flags).unwrap();
 
                 zfs_cmd_api::send_recv(send, recv).unwrap();
 
@@ -427,12 +581,6 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
     // dst keeps them. Because zcopy's ordering is based on the createtxg on the src, and
     // because incrimentals are generated only using src datasets, the zcopy is expected to
     // generate a totally reasonable and normal incrimental send. On the dst side, it will have
-    // a "graph" of snapshots. Trying to generate a recv from there may not work. Basically: we
-    // would assume the wrong parent snapshot of the new snapshots (sent after a src rollback)
-    // because we treat snapshots as a linear history, and rollback makes it non-linear.
-    //
-    // It's not entirely clear if this can be resolved. We might be able to repeatedly ask for
-    // the sizes of incrimental snapshots from dst for various origin datasets, and select the
-    // smallest one (this may be useful in general for reducing space usage).
-
+    // discarded snapshots that follow the rollback target. This is basically an issue of
+    // `zfs-snapshot-recv-order` caused by zfs's linear history requirement.
 }
