@@ -22,11 +22,8 @@ fn level_to_msg_prefix(level: log::Level) -> &'static str
     match level {
         Level::Error => "<3>",
         Level::Warn => "<4>",
-        // really "notice", but we want to free up a seperate "Trace" level so we shift info &
-        // debug down.
-        Level::Info => "<5>",
-        // really "info"
-        Level::Debug => "<6>",
+        Level::Info => "<6>",
+        Level::Debug => "<7>",
         Level::Trace => "<7>",
     }
 }
