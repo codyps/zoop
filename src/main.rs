@@ -1,4 +1,5 @@
 extern crate env_logger;
+extern crate log;
 
 #[macro_use]
 extern crate clap;
@@ -9,13 +10,32 @@ extern crate zoop;
 use zoop::*;
 use zfs_cmd_api::Zfs;
 use clap::{Arg,SubCommand,AppSettings};
+use std::io::Write;
 
 // hack to try to get `app_from_crate!()` to regenerate.
 #[allow(dead_code)]
 const CARGO_TOML: &'static str = include_str!("../Cargo.toml");
 
+fn level_to_msg_prefix(level: log::Level) -> &'static str
+{
+    use log::Level;
+    match level {
+        Level::Error => "<3>",
+        Level::Warn => "<4>",
+        // really "notice", but we want to free up a seperate "Trace" level so we shift info &
+        // debug down.
+        Level::Info => "<5>",
+        // really "info"
+        Level::Debug => "<6>",
+        Level::Trace => "<7>",
+    }
+}
+
 fn main() {
     env_logger::builder()
+        .format(|w, rec| {
+            writeln!(w, "{}{}", level_to_msg_prefix(rec.level()), rec.args())
+        })
         .init();
 
     let matches = app_from_crate!()
