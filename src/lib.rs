@@ -140,6 +140,57 @@ impl<T> Iterator for DrainBTreeMap<T> {
 }
 */
 
+#[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone,Copy)]
+pub struct TrimPoint {
+    /// snapshots per second
+    pub density: (u64,u64),
+    /// seconds back in time from now
+    pub offset: u64,
+}
+
+/// 1. must be sorted by increasing `offset` (smallest first)
+/// 2. the `density` also end up sorted in decreasing (largest first) order.
+///
+/// Note: duplicate offsets and densities likely need handling.
+/*
+fn validate_trim_points(trim_points: &[TrimPoint]) -> Result<(),()>
+{
+    for t in trim_points.iter() {
+        
+    }
+
+    Ok(())
+}
+*/
+
+/// On a single dataset, select snapshots to delete based on some density specifications.
+///
+/// More newer snapshots are kept, Fewer older snapshots. We use multiple time "steps", which are
+/// time points where the density of kept snapshots is reduced.
+///
+/// This function is expected to be run over and over again, resulting in different snapshot results only
+/// when more snapshots are created. We avoid deleting snapshots when more are _not_ being created
+/// by using the timestamp of the most recently created snapshot as the "current" time, from which
+/// all other time-based decisions are derived. This also means that we're forbidden from deleting
+/// the most recent snapshot.
+///
+/// The essential idea is that even if we run this many times, it shouldn't result in deleting more
+/// snapshots.
+///
+/// Because this transformation is incrimental, the smallest reduction in snapshot density we can
+/// make for each time "step" is 1/2 (ie: delete every other snapshot). It is plausible that we
+/// could use a "dithering" approach here to have a somewhat "smoother" transition here, but it's
+/// unclear exactly how valuble that approach is.
+///
+// `trim_points` must be sorted. consider if we can require them being sorted via some trait prior
+// to the function call.
+/*
+pub fn trim_one(zfs: &Zfs, dataset: &str, trim_points: &[TrimPoint])
+{
+
+}
+*/
+
 #[derive(Debug)]
 pub struct ZcopyOpts {
     pub dry_run: bool,
