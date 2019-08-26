@@ -233,14 +233,22 @@ pub fn zcopy_recursive(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_data
         let ds_suffix = &this_src_ds[src_dataset.len()..];
         let this_dest_ds = format!("{}{}", dest_dataset, ds_suffix);
 
-        eprintln!("zcopy: {} to {}", this_src_ds, this_dest_ds);
 
         zcopy_one(src_zfs, dest_zfs, opts, this_src_ds, this_dest_ds.as_ref());
     }
 }
 
+fn show_zcopy(src_dataset: &str, dest_dataset: &str, shown: &mut bool)
+{
+    if !*shown {
+        eprintln!("zcopy: {} to {}", src_dataset, dest_dataset);
+        *shown = true;
+    }
+}
+
 pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &str, dest_dataset: &str)
 {
+    let mut shown = false;
     let mut get_receive_resume_token = zfs_cmd_api::ListBuilder::default();
     get_receive_resume_token.include_filesystems()
         .with_elements(&["receive_resume_token"])
@@ -311,8 +319,9 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
                         eprintln!("No recv resume, skip to normal transfer");
                     }
                 } else {
-                    eprintln!("Resuming partial recv in {}", dest_dataset);
 
+                    show_zcopy(src_dataset, dest_dataset, &mut shown);
+                    eprintln!("Resuming partial recv in {}", dest_dataset);
                     let send = src_zfs.send_resume(res, send_flags).unwrap();
                     let recv = dest_zfs.recv(dest_dataset, &[], None, &[], recv_flags).unwrap();
 
@@ -575,6 +584,7 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
         None => merged_dss.range(..),
     };
 
+    let mut shown_basis = false;
     let mut prev_dst_ds: Option<String> = None;
     for (_, ds) in dss_iter {
         if opts.verbose {
@@ -594,6 +604,15 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
                     continue;
                 }
 
+                show_zcopy(src_dataset, dest_dataset, &mut shown);
+                if !shown_basis {
+                    match prev_dst_ds {
+                        Some(ref v) => println!(" basis {}", v),
+                        None => println!(" new filesystem (no basis)"),
+                    }
+                    shown_basis = true;
+                }
+                println!(" sending {}", &ds.src.name[..]);
                 // send it
                 let send = src_zfs.send(&ds.src.name[..], prev_dst_ds.as_ref().map(|x| &**x), send_flags).unwrap();
                 let recv = dest_zfs.recv(dest_dataset, &[], None, &[], recv_flags).unwrap();
