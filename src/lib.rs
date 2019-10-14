@@ -607,7 +607,7 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
                 show_zcopy(src_dataset, dest_dataset, &mut shown);
                 if !shown_basis {
                     match prev_dst_ds {
-                        Some(ref v) => println!(" basis {}", v),
+                        Some(ref v) => println!(" basis   {}", v),
                         None => println!(" new filesystem (no basis)"),
                     }
                     shown_basis = true;
