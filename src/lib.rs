@@ -331,7 +331,15 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
                     // is emitted during a recv of a resumed send.
                     //
                     // seems plausible that we've got something not-quite-right going on.
-                    zfs_cmd_api::send_recv(send, recv).unwrap();
+                    match zfs_cmd_api::send_recv(send, recv) {
+                        Err(e) => {
+                            // assume we've got a resume that starts from a non-existent snap.
+                            // try to abort the resume
+                            eprintln!("partial recv in '{}' could not be resumed, aborting: {:?}", dest_dataset, e);
+                            dest_zfs.recv_abort_incomplete(dest_dataset).unwrap();
+                        },
+                        Ok(_) => {}
+                    }
                 }
             },
             Err(ZfsError::NoDataset{..}) => {
@@ -586,6 +594,7 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
 
     let mut shown_basis = false;
     let mut prev_dst_ds: Option<String> = None;
+
     for (_, ds) in dss_iter {
         if opts.verbose {
             eprintln!("examine: {:?}", ds);
@@ -629,7 +638,6 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
 
         prev_dst_ds = Some(ds.src.name.clone());
     }
-
 
     // XXX: bookmarks on the SRC allow deletion of snapshots while still keeping send
     // efficiency. As a result, we should create bookmarks to identify points we'll want to

@@ -65,6 +65,22 @@ pub enum ZfsError {
     CannotOpen {
         cmd_info: CmdInfo,
     },
+
+    #[fail(display = "cannot resume send of nonexistent dataset '{}' ({:?})", dataset, cmd_info)]
+    CannotResumeSendDoesNotExist {
+        dataset: String,
+        cmd_info: CmdInfo,
+    },
+
+    #[fail(display = "cannot resume send: {:?}", cmd_info)]
+    CannotResumeSend {
+        cmd_info: CmdInfo,
+    },
+
+    #[fail(display = "cannot recv: failed to read stream ({:?})", cmd_info)]
+    CannotRecvFailedToRead {
+        cmd_info: CmdInfo,
+    },
 }
 
 #[derive(Debug,PartialEq,Eq,Clone)]
@@ -245,48 +261,105 @@ impl<'a> DerefMut for ListExecutor<'a> {
     }
 }
 
+fn cmdinfo_to_error(cmd_info: CmdInfo) -> ZfsError
+{
+    // status: ExitStatus(ExitStatus(256)), stderr: "cannot open \'innerpool/TMP/zoop-test-28239/dst/sub_ds\': dataset does not exist\n"
+    let prefix_ca = "cannot open '";
+    if cmd_info.stderr.starts_with(prefix_ca) {
+        let ds_rest = &cmd_info.stderr[prefix_ca.len()..].to_owned();
+        let mut s = ds_rest.split("': ");
+        let ds = s.next().unwrap();
+        let error = s.next().unwrap();
+        return match error {
+            "dataset does not exist\n" => {
+                ZfsError::NoDataset {
+                    dataset: ds.to_owned(),
+                    cmd_info: cmd_info,
+                }
+            },
+            _ => {
+                ZfsError::CannotOpen {
+                    cmd_info: cmd_info,
+                }
+            }
+        };
+    }
+
+    // Resuming partial recv in tank/backup/zxfer/franklin/franklin/ROOT/arch
+    // cannot resume send: 'franklin/ROOT/arch@znap_2019-10-28-1630_frequent' used in the initial send no longer exists
+    // cannot receive: failed to read from stream
+    // thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(255), Some(1)" }>
+    // note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
+    let prefix_crs = "cannot resume send: '";
+    if cmd_info.stderr.starts_with(prefix_crs) {
+        let ds_rest = &cmd_info.stderr[prefix_crs.len()..];
+        let mut s = ds_rest.split("' ");
+        let ds = s.next().unwrap().to_owned();
+        let error = s.next().unwrap();
+        return match error {
+            "used in the initial send no longer exists\n" => {
+                ZfsError::CannotResumeSendDoesNotExist {
+                    dataset: ds.to_owned(),
+                    cmd_info: cmd_info,
+                }
+            },
+            _ => {
+                ZfsError::CannotResumeSend {
+                    cmd_info: cmd_info,
+                }
+            }
+        };
+    }
+
+    match cmd_info.stderr.as_ref() {
+        "cannot receive: failed to read from stream\n" => {
+            ZfsError::CannotRecvFailedToRead {
+                cmd_info: cmd_info,
+            }
+        },
+        _ => {
+            // generic error
+            ZfsError::Process {
+                cmd_info: cmd_info,
+            }
+        }
+    }
+}
+
+
 impl Zfs {
 
-    fn cmd(&self) -> process::Command
-    {
+    fn cmd(&self) -> process::Command {
         let mut cmd = process::Command::new(&self.zfs_cmd[0]);
         cmd.args(&self.zfs_cmd[1..]);
         cmd
     }
 
-    fn cmdinfo_to_error(cmd_info: CmdInfo) -> ZfsError
-    {
+    fn run_output(&self, mut cmd: process::Command) -> Result<std::process::Output, ZfsError> {
+        info!("run: {:?}", cmd);
 
-        // status: ExitStatus(ExitStatus(256)), stderr: "cannot open \'innerpool/TMP/zoop-test-28239/dst/sub_ds\': dataset does not exist\n"
-        let prefix_ca = "cannot open '";
-        if cmd_info.stderr.starts_with(prefix_ca) {
-            let ds_rest = &cmd_info.stderr[prefix_ca.len()..].to_owned();
-            let mut s = ds_rest.split("': ");
-            let ds = s.next().unwrap();
-            let error = s.next().unwrap();
-            return match error {
-                "dataset does not exist\n" => {
-                    ZfsError::NoDataset {
-                        dataset: ds.to_owned(),
-                        cmd_info: cmd_info,
-                    }
-                },
-                _ => {
-                    ZfsError::CannotOpen {
-                        cmd_info: cmd_info,
-                    }
-                }
+        let output = cmd.output().map_err(|e| ZfsError::Exec{ io: e})?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr[..]).into_owned();
+
+            let cmd_info = CmdInfo {
+                status: output.status,
+                stderr: stderr,
+                cmd: format!("{:?}", cmd),
             };
+
+            return Err(cmdinfo_to_error(cmd_info))
         }
 
-        // generic error
-        ZfsError::Process {
-            cmd_info: cmd_info,
+        if output.stderr.len() > 0 {
+            warn!("stderr: {}", String::from_utf8_lossy(&output.stderr));
         }
+
+       Ok(output)
     }
 
-    pub fn list_from_builder(&self, builder: &ListBuilder) -> Result<ZfsList, ZfsError>
-    {
+    pub fn list_from_builder(&self, builder: &ListBuilder) -> Result<ZfsList, ZfsError> {
         // zfs list -H
         // '-s <prop>' sort by property (multiple allowed)
         // '-d <depth>' recurse to depth
@@ -343,25 +416,7 @@ impl Zfs {
             }
         }
 
-        info!("run: {:?}", cmd);
-
-        let output = cmd.output().map_err(|e| ZfsError::Exec{ io: e})?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr[..]).into_owned();
-
-            let cmd_info = CmdInfo {
-                status: output.status,
-                stderr: stderr,
-                cmd: format!("{:?}", cmd),
-            };
-
-            return Err(Self::cmdinfo_to_error(cmd_info))
-        }
-
-        if output.stderr.len() > 0 {
-            warn!("stderr: {}", String::from_utf8_lossy(&output.stderr));
-        }
+        let output = self.run_output(cmd)?;
 
         Ok(ZfsList { out: output.stdout })
     }
@@ -451,7 +506,15 @@ impl Zfs {
         })
     }
 
-    //pub fn recv_abort_incomplete(&self)
+    pub fn recv_abort_incomplete(&self, dataset: &str) -> Result<(), ZfsError> {
+        let mut cmd = self.cmd();
+
+        cmd.arg("-A")
+            .arg(dataset);
+
+        self.run_output(cmd)?;
+        Ok(())
+    }
 
     pub fn send(&self, snapname: &str, from: Option<&str>, flags: BitFlags<SendFlags>) -> io::Result<ZfsSend>
     {
