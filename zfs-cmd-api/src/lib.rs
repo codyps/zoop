@@ -509,7 +509,8 @@ impl Zfs {
     pub fn recv_abort_incomplete(&self, dataset: &str) -> Result<(), ZfsError> {
         let mut cmd = self.cmd();
 
-        cmd.arg("-A")
+        cmd.arg("recv")
+            .arg("-A")
             .arg(dataset);
 
         self.run_output(cmd)?;
