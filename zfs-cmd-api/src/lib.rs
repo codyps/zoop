@@ -1,14 +1,6 @@
 #![warn(rust_2018_idioms)]
 #[macro_use] extern crate log;
 
-extern crate failure;
-extern crate failure_derive;
-extern crate fmt_extra;
-
-extern crate enumflags2;
-
-extern crate shell_words;
-
 use failure_derive::Fail;
 use enumflags2::BitFlags;
 use std::ops::{Deref,DerefMut};

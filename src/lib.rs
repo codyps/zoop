@@ -1,3 +1,5 @@
+#![warn(rust_2018_idioms)]
+
 // bookmark contents:
 //  NAME                                              PROPERTY              VALUE                  SOURCE
 //  innerpool/data/home#znap_2019-06-01-0400_monthly  type                  bookmark               -
@@ -14,12 +16,7 @@
 //  guid
 //  (and everything else)
 
-
-#[macro_use] extern crate log;
-extern crate zfs_cmd_api;
-extern crate fmt_extra;
-extern crate enumflags2;
-
+use log::{info, trace};
 use enumflags2::BitFlags;
 use zfs_cmd_api::{Zfs, ZfsError, ZfsList};
 use std::collections::BTreeMap;

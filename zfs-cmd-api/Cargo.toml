@@ -6,6 +6,7 @@ license = "AGPL-3.0-or-later"
 description = "Interact with zfs via the supported cmd line tools"
 documentation = "https://docs.rs/zfs-cmd-api"
 repository = "https://github.com/jmesmon/zoop"
+edition = "2018"
 
 [dependencies]
 failure = "0.1.5"

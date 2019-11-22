@@ -7,14 +7,15 @@ license = "AGPL-3.0-or-later"
 homepage = "https://github.com/jmesmon/zoop"
 repository = "https://github.com/jmesmon/zoop"
 documentation = "https://docs.rs/zoop"
+edition = "2018"
 
 [dependencies]
-clap = "*"
-zfs-cmd-api = { path = "zfs-cmd-api", version = "*" }
-fmt-extra = "*"
-enumflags2 = "^0.5"
-env_logger = "*"
-log = "*"
+clap = "2.33.0"
+zfs-cmd-api = { path = "zfs-cmd-api", version = "0.2.0" }
+fmt-extra = "0.2.1"
+enumflags2 = "0.6.2"
+env_logger = "0.7.1"
+log = "0.4.8"
 
 [profile.release]
 debug = true
