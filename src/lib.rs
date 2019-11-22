@@ -23,6 +23,7 @@ extern crate enumflags2;
 use enumflags2::BitFlags;
 use zfs_cmd_api::{Zfs, ZfsError, ZfsList};
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::borrow::Borrow;
 use std::convert::TryFrom;
 
@@ -66,30 +67,18 @@ struct Dataset {
 
 #[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone)]
 struct CreateTxg {
-    s: String
+    s: u64,
 }
 
 impl From<String> for CreateTxg {
     fn from(s: String) -> Self {
-        CreateTxg { s: s }
+        CreateTxg { s: s.parse().unwrap() }
     }
 }
 
 impl From<&str> for CreateTxg {
     fn from(s: &str) -> Self {
-        CreateTxg { s: s.to_owned() }
-    }
-}
-
-impl Borrow<str> for CreateTxg {
-    fn borrow(&self) -> &str {
-        &self.s
-    }
-}
-
-impl AsRef<str> for CreateTxg {
-    fn as_ref(&self) -> &str {
-        &self.s
+        CreateTxg { s: s.parse().unwrap() }
     }
 }
 
@@ -221,6 +210,8 @@ pub fn zcopy_recursive(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_data
     let dss = src_zfs.list_from_builder(&enum_ds)
         .expect("could not enumerate decendent filesystems");
 
+    let dss: BTreeSet<Vec<u8>> = dss.iter().map(|v| v.to_owned()).collect();
+
     // XXX: consider the ordering of this iteration
     for this_src_ds in dss.iter() {
         // XXX: consider if ds names are allowed to be non-utf8
@@ -265,6 +256,7 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
         | zfs_cmd_api::SendFlags::LargeBlock
         | zfs_cmd_api::SendFlags::Raw;
     let mut recv_flags = BitFlags::default() | zfs_cmd_api::RecvFlags::Force;
+    let mut destroy_flags = BitFlags::default();
     if opts.resumable {
         recv_flags |= zfs_cmd_api::RecvFlags::Resumeable;
     }
@@ -273,10 +265,12 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
         // XXX: consider performing a send dry run (optionally) instead, omitting
         // the recv altogether.
         recv_flags |= zfs_cmd_api::RecvFlags::DryRun;
+        destroy_flags |= zfs_cmd_api::DestroyFlags::DryRun;
     }
     if opts.verbose {
         recv_flags |= zfs_cmd_api::RecvFlags::Verbose;
         send_flags |= zfs_cmd_api::SendFlags::Verbose;
+        destroy_flags |= zfs_cmd_api::DestroyFlags::Verbose;
     }
 
     // - dest will contain some or none of snapshots/bookmarks in source
@@ -336,7 +330,11 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
                             // assume we've got a resume that starts from a non-existent snap.
                             // try to abort the resume
                             eprintln!("partial recv in '{}' could not be resumed, aborting: {:?}", dest_dataset, e);
-                            dest_zfs.recv_abort_incomplete(dest_dataset).unwrap();
+                            if !opts.dry_run {
+                                dest_zfs.recv_abort_incomplete(dest_dataset).unwrap();
+                            } else {
+                                eprintln!("skipping abort in dry run");
+                            }
                         },
                         Ok(_) => {}
                     }
@@ -568,6 +566,20 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
             },
             None => {
                 info!("no basis found");
+
+                // XXX: examine the destination dataset. ensure there are no snapshots there.
+                let mut enum_ds_snaps = zfs_cmd_api::ListBuilder::default();
+                enum_ds_snaps.include_snapshots()
+                    .with_dataset(dest_dataset)
+                    .include_snapshots()
+                    .depth(1)
+                    .with_elements(&["name"]);
+                let snaps = dest_zfs.list_from_builder(&enum_ds_snaps).expect("could not list dest ds to check for snaps");
+
+                // TODO: consider making this optional as it is technically a data loser.
+                for snap in snaps.iter() {
+                    dest_zfs.destroy(destroy_flags, std::str::from_utf8(snap).unwrap()).unwrap();
+                }
                 break;
             }
         }

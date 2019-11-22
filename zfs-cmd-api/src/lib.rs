@@ -81,6 +81,11 @@ pub enum ZfsError {
     CannotRecvFailedToRead {
         cmd_info: CmdInfo,
     },
+
+    #[fail(display = "cannot recv new fs: {:?}", cmd_info)]
+    CannotRecvNewFs {
+        cmd_info: CmdInfo
+    }
 }
 
 #[derive(Debug,PartialEq,Eq,Clone)]
@@ -311,6 +316,38 @@ fn cmdinfo_to_error(cmd_info: CmdInfo) -> ZfsError
         };
     }
 
+    // run: "zfs" "send" "-eLcw" "mainrust/ROOT@znap_2019-10-01-0446_monthly"
+    // run: "zfs" "recv" "-Fs" "tank/backup/zoop/arnold2/mainrust/ROOT"
+    // cannot receive new filesystem stream: destination has snapshots (eg. tank/backup/zoop/arnold2/mainrust/ROOT@znap_2019-08-23-2348_frequent)
+    // must destroy them to overwrite it
+    // thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(0), Some(1)" }', src/libcore/result.rs:1084:5
+    // note: run with `RUST_BACKTRACE=1` environment variable to display a backtra
+    let prefix_crnfs = "cannot receive new filesystem stream: ";
+    if cmd_info.stderr.starts_with(prefix_crnfs) {
+        return ZfsError::CannotRecvNewFs {
+            cmd_info: cmd_info,
+        };
+    }
+
+    //   sending mainrust/ROOT@znap_2019-09-01-0631_monthly
+    //  run: "zfs" "send" "-eLcw" "-i" "mainrust/ROOT@znap_2019-11-22-0334_frequent" "mainrust/ROOT@znap_2019-09-01-0631_monthly"
+    //  run: "zfs" "recv" "-Fs" "tank/backup/zoop/arnold2/mainrust/ROOT"
+    //  warning: cannot send 'mainrust/ROOT@znap_2019-09-01-0631_monthly': not an earlier snapshot from the same fs
+    //  cannot receive: failed to read from stream
+    //  thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(1), Some(1)" }', src/libcore/result.rs:1084:5
+    //  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
+
+
+//  zcopy: mainrust/ROOT/gentoo to tank/backup/zoop/arnold2/mainrust/ROOT/gentoo
+//   new filesystem (no basis)
+//   sending mainrust/ROOT/gentoo@znap_2019-09-01-0631_monthly
+//  run: "zfs" "send" "-eLcw" "mainrust/ROOT/gentoo@znap_2019-09-01-0631_monthly"
+//  run: "zfs" "recv" "-Fs" "tank/backup/zoop/arnold2/mainrust/ROOT/gentoo"
+//  umount: /tank/backup/zoop/arnold2/mainrust/ROOT/gentoo/var: no mount point specified.
+//  cannot unmount '/tank/backup/zoop/arnold2/mainrust/ROOT/gentoo/var': umount failed
+//  thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(0), Some(1)" }', src/libcore/result.rs:1084:5
+//  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
+
     match cmd_info.stderr.as_ref() {
         "cannot receive: failed to read from stream\n" => {
             ZfsError::CannotRecvFailedToRead {
@@ -430,6 +467,30 @@ impl Zfs {
         ListExecutor::from_parent(self)
     }
 
+    /// NOTE: manual documents that if `dataset` is a bookmark, no flags are permitted
+    pub fn destroy(&self, flags: BitFlags<DestroyFlags>, dataset: &str) -> Result<std::process::Output, ZfsError> {
+        let mut cmd = self.cmd();
+        cmd.arg("destroy");
+
+        if !flags.is_empty() {
+            let mut opts = "-".to_owned();
+            for flag in flags.iter() {
+                opts.push(match flag {
+                    DestroyFlags::RecursiveDependents => 'R',
+                    DestroyFlags::ForceUmount => 'f',
+                    DestroyFlags::DryRun => 'n',
+                    DestroyFlags::MachineParsable => 'p',
+                    DestroyFlags::RecursiveChildren => 'r',
+                    DestroyFlags::Verbose => 'v',
+                });
+            }
+
+            cmd.arg(opts);
+        }
+        cmd.arg(dataset);
+        self.run_output(cmd)
+    }
+
     // delete
     //
     // hold
@@ -471,28 +532,31 @@ impl Zfs {
 
         cmd.arg("send");
 
-        let mut opts = "-".to_owned();
+        if !flags.is_empty() {
+            let mut opts = "-".to_owned();
 
-        // forbidden flags:
-        //  - `replicate`: `-R`
-        //  - `props`: `-p`
-        //  - `backup`: `-b`
-        //  - `dedup`: `-D`
-        //  - `holds`: `-h`
-        //  - `redactbook`: `-d` `arg`
+            // forbidden flags:
+            //  - `replicate`: `-R`
+            //  - `props`: `-p`
+            //  - `backup`: `-b`
+            //  - `dedup`: `-D`
+            //  - `holds`: `-h`
+            //  - `redactbook`: `-d` `arg`
 
-        for flag in flags.iter() {
-            match flag {
-                SendFlags::LargeBlock => { opts.push('L') },
-                SendFlags::EmbedData => { opts.push('e') },
-                SendFlags::Compressed => { opts.push('c') },
-                SendFlags::Raw => { opts.push('w') },
+            for flag in flags.iter() {
+                match flag {
+                    SendFlags::LargeBlock => { opts.push('L') },
+                    SendFlags::EmbedData => { opts.push('e') },
+                    SendFlags::Compressed => { opts.push('c') },
+                    SendFlags::Raw => { opts.push('w') },
 
-                SendFlags::Verbose => { opts.push('v') },
-                SendFlags::DryRun => { opts.push('n') },
-                SendFlags::Parsable => { opts.push('P') },
-                _ => { panic!("unsupported flag: {:?}", flag); }
+                    SendFlags::Verbose => { opts.push('v') },
+                    SendFlags::DryRun => { opts.push('n') },
+                    SendFlags::Parsable => { opts.push('P') },
+                    _ => { panic!("unsupported flag: {:?}", flag); }
+                }
             }
+            cmd.arg(opts);
         }
 
         cmd.arg("-t").arg(receive_resume_token);
@@ -523,34 +587,35 @@ impl Zfs {
 
         cmd.arg("send");
 
-        let mut opts = "-".to_owned();
-
         let mut include_intermediary = false;
-        // realistically, a series of `if flags.contains(*) {*}` statements more susinctly
-        // represents the work needed to be done here. Unfortunately, it isn't clear how to form
-        // that in a way that ensures we have handling for all `SendFlags`.
-        for flag in flags.iter() {
-            match flag {
-                SendFlags::EmbedData => { opts.push('e') },
-                SendFlags::LargeBlock => { opts.push('L') },
-                SendFlags::Compressed => { opts.push('c') },
-                SendFlags::Raw => { opts.push('w') },
+        if !flags.is_empty() {
+            let mut opts = "-".to_owned();
+            // realistically, a series of `if flags.contains(*) {*}` statements more susinctly
+            // represents the work needed to be done here. Unfortunately, it isn't clear how to form
+            // that in a way that ensures we have handling for all `SendFlags`.
+            for flag in flags.iter() {
+                match flag {
+                    SendFlags::EmbedData => { opts.push('e') },
+                    SendFlags::LargeBlock => { opts.push('L') },
+                    SendFlags::Compressed => { opts.push('c') },
+                    SendFlags::Raw => { opts.push('w') },
 
-                SendFlags::Dedup => { opts.push('D') },
+                    SendFlags::Dedup => { opts.push('D') },
 
-                SendFlags::IncludeIntermediary => {
-                    include_intermediary = true
-                },
-                SendFlags::IncludeHolds => { opts.push('h') },
-                SendFlags::IncludeProps => { opts.push('p') },
-                SendFlags::Verbose => { opts.push('v') },
-                SendFlags::DryRun => { opts.push('n') },
-                SendFlags::Parsable => { opts.push('P') },
-                SendFlags::Replicate => { opts.push('R') },
+                    SendFlags::IncludeIntermediary => {
+                        include_intermediary = true
+                    },
+                    SendFlags::IncludeHolds => { opts.push('h') },
+                    SendFlags::IncludeProps => { opts.push('p') },
+                    SendFlags::Verbose => { opts.push('v') },
+                    SendFlags::DryRun => { opts.push('n') },
+                    SendFlags::Parsable => { opts.push('P') },
+                    SendFlags::Replicate => { opts.push('R') },
+                }
             }
-        }
 
-        cmd.arg(opts);
+            cmd.arg(opts);
+        }
 
         match from {
             Some(f) => {
@@ -593,24 +658,26 @@ impl Zfs {
 
         cmd.arg("recv");
 
-        let mut opts = "-".to_owned();
+        if !flags.is_empty() {
+            let mut opts = "-".to_owned();
 
-        for flag in flags.iter() {
-            match flag {
-                RecvFlags::Force => opts.push('F'),
-                RecvFlags::Resumeable => opts.push('s'),
+            for flag in flags.iter() {
+                match flag {
+                    RecvFlags::Force => opts.push('F'),
+                    RecvFlags::Resumeable => opts.push('s'),
 
-                RecvFlags::DiscardFirstName => opts.push('d'),
-                RecvFlags::DiscardAllButLastName => opts.push('e'),
-                RecvFlags::IgnoreHolds => opts.push('h'),
-                RecvFlags::DryRun => opts.push('n'),
-                RecvFlags::NoMount => opts.push('u'),
-                RecvFlags::Verbose => opts.push('v'),
+                    RecvFlags::DiscardFirstName => opts.push('d'),
+                    RecvFlags::DiscardAllButLastName => opts.push('e'),
+                    RecvFlags::IgnoreHolds => opts.push('h'),
+                    RecvFlags::DryRun => opts.push('n'),
+                    RecvFlags::NoMount => opts.push('u'),
+                    RecvFlags::Verbose => opts.push('v'),
+                }
             }
-        }
 
-        cmd
-            .arg(opts);
+            cmd
+                .arg(opts);
+        }
 
         for set_prop in set_props.into_iter() {
             let mut s = String::new();
@@ -742,6 +809,15 @@ pub enum SendFlags {
     Replicate = 1<<11,
 }
 
+#[derive(EnumFlags,Copy,Clone,Debug,PartialEq,Eq)]
+pub enum DestroyFlags {
+    RecursiveDependents = 1 << 0,
+    ForceUmount = 1 << 1,
+    DryRun = 1 << 2,
+    MachineParsable = 1 << 3,
+    RecursiveChildren = 1 << 4,
+    Verbose = 1 << 5,
+}
 
 // 
 // send -t <token>
