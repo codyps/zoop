@@ -1,16 +1,15 @@
-
+#![warn(rust_2018_idioms)]
 #[macro_use] extern crate log;
 
 extern crate failure;
+extern crate failure_derive;
 extern crate fmt_extra;
-#[macro_use] extern crate failure_derive;
 
 extern crate enumflags2;
-#[macro_use]
-extern crate enumflags2_derive;
 
 extern crate shell_words;
 
+use failure_derive::Fail;
 use enumflags2::BitFlags;
 use std::ops::{Deref,DerefMut};
 use std::env;
@@ -94,7 +93,7 @@ pub struct ZfsList {
 }
 
 impl fmt::Display for ZfsList {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         write!(fmt, "[")?;
         for i in self.iter() {
@@ -463,7 +462,7 @@ impl Zfs {
         self.list().query()
     }
 
-    pub fn list(&self) -> ListExecutor {
+    pub fn list(&self) -> ListExecutor<'_> {
         ListExecutor::from_parent(self)
     }
 
@@ -739,7 +738,7 @@ pub fn send_recv(mut send: ZfsSend, mut recv: ZfsRecv) -> io::Result<u64>
     Ok(bytes)
 }
 
-#[derive(EnumFlags,Copy,Clone,Debug,PartialEq,Eq)]
+#[derive(BitFlags,Copy,Clone,Debug,PartialEq,Eq)]
 pub enum RecvFlags {
     // correspond to `lzc` booleans/functions
     /// -F
@@ -778,7 +777,7 @@ pub enum RecvFlags {
 }
 
 
-#[derive(EnumFlags,Copy,Clone,Debug,PartialEq,Eq)]
+#[derive(BitFlags,Copy,Clone,Debug,PartialEq,Eq)]
 pub enum SendFlags {
     // correspond to lzc SendFlags
     /// -e
@@ -809,7 +808,7 @@ pub enum SendFlags {
     Replicate = 1<<11,
 }
 
-#[derive(EnumFlags,Copy,Clone,Debug,PartialEq,Eq)]
+#[derive(BitFlags,Copy,Clone,Debug,PartialEq,Eq)]
 pub enum DestroyFlags {
     RecursiveDependents = 1 << 0,
     ForceUmount = 1 << 1,
