@@ -123,9 +123,9 @@ fn main() {
         println!("dry_run: {}", dry_run);
 
         if recursive {
-            zcopy_recursive(&src_zfs, &dest_zfs, &opts, src_dataset, dest_dataset);
+            zcopy_recursive(&src_zfs, &dest_zfs, &opts, src_dataset, dest_dataset).unwrap();
         } else {
-            zcopy_one(&src_zfs, &dest_zfs, &opts, src_dataset, dest_dataset);
+            zcopy_one(&src_zfs, &dest_zfs, &opts, src_dataset, dest_dataset).unwrap();
         }
     } else {
         println!("need a SubCommand");

@@ -320,6 +320,7 @@ fn cmdinfo_to_error(cmd_info: CmdInfo) -> ZfsError
         };
     }
 
+    // XXX: avoided by fixing createtxg sort
     //   sending mainrust/ROOT@znap_2019-09-01-0631_monthly
     //  run: "zfs" "send" "-eLcw" "-i" "mainrust/ROOT@znap_2019-11-22-0334_frequent" "mainrust/ROOT@znap_2019-09-01-0631_monthly"
     //  run: "zfs" "recv" "-Fs" "tank/backup/zoop/arnold2/mainrust/ROOT"
@@ -329,15 +330,25 @@ fn cmdinfo_to_error(cmd_info: CmdInfo) -> ZfsError
     //  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
 
 
-//  zcopy: mainrust/ROOT/gentoo to tank/backup/zoop/arnold2/mainrust/ROOT/gentoo
-//   new filesystem (no basis)
-//   sending mainrust/ROOT/gentoo@znap_2019-09-01-0631_monthly
-//  run: "zfs" "send" "-eLcw" "mainrust/ROOT/gentoo@znap_2019-09-01-0631_monthly"
-//  run: "zfs" "recv" "-Fs" "tank/backup/zoop/arnold2/mainrust/ROOT/gentoo"
-//  umount: /tank/backup/zoop/arnold2/mainrust/ROOT/gentoo/var: no mount point specified.
-//  cannot unmount '/tank/backup/zoop/arnold2/mainrust/ROOT/gentoo/var': umount failed
-//  thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(0), Some(1)" }', src/libcore/result.rs:1084:5
-//  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
+    // XXX: worked around by sorting datasets
+    //  zcopy: mainrust/ROOT/gentoo to tank/backup/zoop/arnold2/mainrust/ROOT/gentoo
+    //   new filesystem (no basis)
+    //   sending mainrust/ROOT/gentoo@znap_2019-09-01-0631_monthly
+    //  run: "zfs" "send" "-eLcw" "mainrust/ROOT/gentoo@znap_2019-09-01-0631_monthly"
+    //  run: "zfs" "recv" "-Fs" "tank/backup/zoop/arnold2/mainrust/ROOT/gentoo"
+    //  umount: /tank/backup/zoop/arnold2/mainrust/ROOT/gentoo/var: no mount point specified.
+    //  cannot unmount '/tank/backup/zoop/arnold2/mainrust/ROOT/gentoo/var': umount failed
+    //  thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(0), Some(1)" }', src/libcore/result.rs:1084:5
+    //  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
+
+
+    // XXX: need to restart the zcopy with re-listing the snaps to transfer
+    //  run: "zfs" "recv" "-Fs" "tank/backup/zoop/arnold2/mainrust/enc/home/y"
+    //  WARNING: could not send mainrust/enc/home/y@znap_2019-11-21-0315_hourly: does not exist
+    //  cannot receive: failed to read from stream
+    //  thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(1), Some(1)" }', src/libcore/result.rs:1084:5
+    //  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
+
 
     match cmd_info.stderr.as_ref() {
         "cannot receive: failed to read from stream\n" => {

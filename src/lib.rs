@@ -16,13 +16,15 @@
 //  guid
 //  (and everything else)
 
-use log::{info, trace};
+use log::{info, trace, error};
 use enumflags2::BitFlags;
 use zfs_cmd_api::{Zfs, ZfsError, ZfsList};
+
+use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::borrow::Borrow;
 use std::convert::TryFrom;
+use std::error::Error;
 
 #[derive(Debug,PartialEq,Eq,PartialOrd,Ord,Hash,Clone)]
 enum DatasetType {
@@ -194,7 +196,7 @@ impl Default for ZcopyOpts {
     }
 }
 
-pub fn zcopy_recursive(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &str, dest_dataset: &str)
+pub fn zcopy_recursive(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &str, dest_dataset: &str) -> Result<(), Vec<Box<dyn Error>>>
 {
     // XXX: consider if it would be useful to obtain additional info other than name here.
     // XXX: should we match up these src filesystems with dest filesystems?
@@ -209,6 +211,7 @@ pub fn zcopy_recursive(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_data
 
     let dss: BTreeSet<Vec<u8>> = dss.iter().map(|v| v.to_owned()).collect();
 
+    let mut errors = Vec::new();
     // XXX: consider the ordering of this iteration
     for this_src_ds in dss.iter() {
         // XXX: consider if ds names are allowed to be non-utf8
@@ -222,7 +225,19 @@ pub fn zcopy_recursive(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_data
         let this_dest_ds = format!("{}{}", dest_dataset, ds_suffix);
 
 
-        zcopy_one(src_zfs, dest_zfs, opts, this_src_ds, this_dest_ds.as_ref());
+        match zcopy_one(src_zfs, dest_zfs, opts, this_src_ds, this_dest_ds.as_ref()) {
+            Ok(_) => {},
+            Err(e) => {
+                error!("Error: zcopy {} to {} failed: {}", this_src_ds, this_dest_ds, e);
+                errors.push(From::from(e));
+            }
+        }
+    }
+
+    if errors.len() != 0  {
+        Err(errors)
+    } else {
+        Ok(())
     }
 }
 
@@ -234,7 +249,8 @@ fn show_zcopy(src_dataset: &str, dest_dataset: &str, shown: &mut bool)
     }
 }
 
-pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &str, dest_dataset: &str)
+pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts,
+        src_dataset: &str, dest_dataset: &str) -> Result<(), String>
 {
     let mut shown = false;
     let mut get_receive_resume_token = zfs_cmd_api::ListBuilder::default();
@@ -351,12 +367,15 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
     // XXX: we could optimize the zfs-cmd-to-zoop datapassing by not asking for "type" in
     // dst_list, but it's easier to include it.
     let src_list =
-        src_zfs.list_from_builder(list_builder.clone().include_bookmarks().with_dataset(src_dataset))
-        .expect("src list failed");
+        src_zfs.list_from_builder(list_builder.clone().include_bookmarks().with_dataset(src_dataset)).map_err(|e| {
+            format!("src list failed: {:?}", e)
+        })?;
     let dst_list = match dest_zfs.list_from_builder(list_builder.clone().with_dataset(dest_dataset)) {
         Ok(v) => v,
         Err(ZfsError::NoDataset{..}) => ZfsList::default(),
-        Err(e) => panic!("dst list failed: {}", e),
+        Err(e) => {
+            return Err(format!("dst list failed: {}", e));
+        }
     };
 
     fn to_datasets(list_vecs: Vec<Vec<String>>) ->
@@ -571,12 +590,31 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
                     .include_snapshots()
                     .depth(1)
                     .with_elements(&["name"]);
-                let snaps = dest_zfs.list_from_builder(&enum_ds_snaps).expect("could not list dest ds to check for snaps");
 
-                // TODO: consider making this optional as it is technically a data loser.
-                for snap in snaps.iter() {
-                    dest_zfs.destroy(destroy_flags, std::str::from_utf8(snap).unwrap()).unwrap();
-                }
+                match dest_zfs.list_from_builder(&enum_ds_snaps) {
+                    Ok(snaps) => {
+                        // TODO: consider making this optional as it is technically a data loser.
+                        for snap in snaps.iter() {
+                            // XXX: are dataset/snap names always utf8?
+                            let snap = std::str::from_utf8(snap).unwrap();
+                            dest_zfs.destroy(destroy_flags, snap).map_err(|e| {
+                                format!("could not destroy snap {}: {}", snap, e)
+                            })?;
+                        }
+                    },
+                    Err(e) => {
+                        match e {
+                            ZfsError::NoDataset { dataset : _, cmd_info: _ } => {
+                                // totally fine, this is a new ds
+                            },
+                            e => {
+                                // bad news
+                                return Err(format!("could not list dest ds to check for snaps: {}", e));
+                            }
+                        }
+                    },
+                };
+
                 break;
             }
         }
@@ -647,6 +685,8 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts, src_dataset: &
 
         prev_dst_ds = Some(ds.src.name.clone());
     }
+
+    Ok(())
 
     // XXX: bookmarks on the SRC allow deletion of snapshots while still keeping send
     // efficiency. As a result, we should create bookmarks to identify points we'll want to
