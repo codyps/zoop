@@ -1,13 +1,12 @@
-extern crate zfs_ctrl;
+extern crate zfs_cmd_api as zfs;
 
 #[test]
 fn zfs() {
-    let _ = zfs_ctrl::Zfs::default();
+    let _ = zfs::Zfs::default();
 }
 
 #[test]
 fn zfs_list() {
-    let zfs = zfs_ctrl::Zfs::default();
-
-    println!("{:?}", String::from_utf8_lossy(&zfs.list().expect("list failed")));
+    let zfs = zfs::Zfs::default();
+    let _ = zfs.list_basic().expect("list failed");
 }

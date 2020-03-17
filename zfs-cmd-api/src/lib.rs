@@ -1,13 +1,7 @@
-extern crate failure;
-extern crate fmt_extra;
-#[macro_use] extern crate failure_derive;
+#![warn(rust_2018_idioms)]
+#[macro_use] extern crate log;
 
-extern crate enumflags2;
-#[macro_use]
-extern crate enumflags2_derive;
-
-extern crate shell_words;
-
+use failure_derive::Fail;
 use enumflags2::BitFlags;
 use std::ops::{Deref,DerefMut};
 use std::env;
@@ -61,6 +55,27 @@ pub enum ZfsError {
     CannotOpen {
         cmd_info: CmdInfo,
     },
+
+    #[fail(display = "cannot resume send of nonexistent dataset '{}' ({:?})", dataset, cmd_info)]
+    CannotResumeSendDoesNotExist {
+        dataset: String,
+        cmd_info: CmdInfo,
+    },
+
+    #[fail(display = "cannot resume send: {:?}", cmd_info)]
+    CannotResumeSend {
+        cmd_info: CmdInfo,
+    },
+
+    #[fail(display = "cannot recv: failed to read stream ({:?})", cmd_info)]
+    CannotRecvFailedToRead {
+        cmd_info: CmdInfo,
+    },
+
+    #[fail(display = "cannot recv new fs: {:?}", cmd_info)]
+    CannotRecvNewFs {
+        cmd_info: CmdInfo
+    }
 }
 
 #[derive(Debug,PartialEq,Eq,Clone)]
@@ -69,7 +84,7 @@ pub struct ZfsList {
 }
 
 impl fmt::Display for ZfsList {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         write!(fmt, "[")?;
         for i in self.iter() {
@@ -199,8 +214,8 @@ impl ListBuilder {
         self
     }
 
-    pub fn with_elements(&mut self, mut elements: Vec<&'static str>) -> &mut Self {
-        self.elements.append(&mut elements);
+    pub fn with_elements(&mut self, mut elements: &[&'static str]) -> &mut Self {
+        self.elements.extend_from_slice(&mut elements);
         self
     }
 
@@ -241,48 +256,148 @@ impl<'a> DerefMut for ListExecutor<'a> {
     }
 }
 
+fn cmdinfo_to_error(cmd_info: CmdInfo) -> ZfsError
+{
+    // status: ExitStatus(ExitStatus(256)), stderr: "cannot open \'innerpool/TMP/zoop-test-28239/dst/sub_ds\': dataset does not exist\n"
+    let prefix_ca = "cannot open '";
+    if cmd_info.stderr.starts_with(prefix_ca) {
+        let ds_rest = &cmd_info.stderr[prefix_ca.len()..].to_owned();
+        let mut s = ds_rest.split("': ");
+        let ds = s.next().unwrap();
+        let error = s.next().unwrap();
+        return match error {
+            "dataset does not exist\n" => {
+                ZfsError::NoDataset {
+                    dataset: ds.to_owned(),
+                    cmd_info: cmd_info,
+                }
+            },
+            _ => {
+                ZfsError::CannotOpen {
+                    cmd_info: cmd_info,
+                }
+            }
+        };
+    }
+
+    // Resuming partial recv in tank/backup/zxfer/franklin/franklin/ROOT/arch
+    // cannot resume send: 'franklin/ROOT/arch@znap_2019-10-28-1630_frequent' used in the initial send no longer exists
+    // cannot receive: failed to read from stream
+    // thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(255), Some(1)" }>
+    // note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
+    let prefix_crs = "cannot resume send: '";
+    if cmd_info.stderr.starts_with(prefix_crs) {
+        let ds_rest = &cmd_info.stderr[prefix_crs.len()..];
+        let mut s = ds_rest.split("' ");
+        let ds = s.next().unwrap().to_owned();
+        let error = s.next().unwrap();
+        return match error {
+            "used in the initial send no longer exists\n" => {
+                ZfsError::CannotResumeSendDoesNotExist {
+                    dataset: ds.to_owned(),
+                    cmd_info: cmd_info,
+                }
+            },
+            _ => {
+                ZfsError::CannotResumeSend {
+                    cmd_info: cmd_info,
+                }
+            }
+        };
+    }
+
+    // run: "zfs" "send" "-eLcw" "mainrust/ROOT@znap_2019-10-01-0446_monthly"
+    // run: "zfs" "recv" "-Fs" "tank/backup/zoop/arnold2/mainrust/ROOT"
+    // cannot receive new filesystem stream: destination has snapshots (eg. tank/backup/zoop/arnold2/mainrust/ROOT@znap_2019-08-23-2348_frequent)
+    // must destroy them to overwrite it
+    // thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(0), Some(1)" }', src/libcore/result.rs:1084:5
+    // note: run with `RUST_BACKTRACE=1` environment variable to display a backtra
+    let prefix_crnfs = "cannot receive new filesystem stream: ";
+    if cmd_info.stderr.starts_with(prefix_crnfs) {
+        return ZfsError::CannotRecvNewFs {
+            cmd_info: cmd_info,
+        };
+    }
+
+    // XXX: avoided by fixing createtxg sort
+    //   sending mainrust/ROOT@znap_2019-09-01-0631_monthly
+    //  run: "zfs" "send" "-eLcw" "-i" "mainrust/ROOT@znap_2019-11-22-0334_frequent" "mainrust/ROOT@znap_2019-09-01-0631_monthly"
+    //  run: "zfs" "recv" "-Fs" "tank/backup/zoop/arnold2/mainrust/ROOT"
+    //  warning: cannot send 'mainrust/ROOT@znap_2019-09-01-0631_monthly': not an earlier snapshot from the same fs
+    //  cannot receive: failed to read from stream
+    //  thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(1), Some(1)" }', src/libcore/result.rs:1084:5
+    //  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
+
+
+    // XXX: worked around by sorting datasets
+    //  zcopy: mainrust/ROOT/gentoo to tank/backup/zoop/arnold2/mainrust/ROOT/gentoo
+    //   new filesystem (no basis)
+    //   sending mainrust/ROOT/gentoo@znap_2019-09-01-0631_monthly
+    //  run: "zfs" "send" "-eLcw" "mainrust/ROOT/gentoo@znap_2019-09-01-0631_monthly"
+    //  run: "zfs" "recv" "-Fs" "tank/backup/zoop/arnold2/mainrust/ROOT/gentoo"
+    //  umount: /tank/backup/zoop/arnold2/mainrust/ROOT/gentoo/var: no mount point specified.
+    //  cannot unmount '/tank/backup/zoop/arnold2/mainrust/ROOT/gentoo/var': umount failed
+    //  thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(0), Some(1)" }', src/libcore/result.rs:1084:5
+    //  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
+
+
+    // XXX: need to restart the zcopy with re-listing the snaps to transfer
+    //  run: "zfs" "recv" "-Fs" "tank/backup/zoop/arnold2/mainrust/enc/home/y"
+    //  WARNING: could not send mainrust/enc/home/y@znap_2019-11-21-0315_hourly: does not exist
+    //  cannot receive: failed to read from stream
+    //  thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Custom { kind: Other, error: "send or recv failed: Some(1), Some(1)" }', src/libcore/result.rs:1084:5
+    //  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
+
+
+    match cmd_info.stderr.as_ref() {
+        "cannot receive: failed to read from stream\n" => {
+            ZfsError::CannotRecvFailedToRead {
+                cmd_info: cmd_info,
+            }
+        },
+        _ => {
+            // generic error
+            ZfsError::Process {
+                cmd_info: cmd_info,
+            }
+        }
+    }
+}
+
+
 impl Zfs {
 
-    fn cmd(&self) -> process::Command
-    {
+    fn cmd(&self) -> process::Command {
         let mut cmd = process::Command::new(&self.zfs_cmd[0]);
         cmd.args(&self.zfs_cmd[1..]);
         cmd
     }
 
-    fn cmdinfo_to_error(cmd_info: CmdInfo) -> ZfsError
-    {
+    fn run_output(&self, mut cmd: process::Command) -> Result<std::process::Output, ZfsError> {
+        info!("run: {:?}", cmd);
 
-        // status: ExitStatus(ExitStatus(256)), stderr: "cannot open \'innerpool/TMP/zoop-test-28239/dst/sub_ds\': dataset does not exist\n"
-        let prefix_ca = "cannot open '";
-        if cmd_info.stderr.starts_with(prefix_ca) {
-            let ds_rest = &cmd_info.stderr[prefix_ca.len()..].to_owned();
-            let mut s = ds_rest.split("': ");
-            let ds = s.next().unwrap();
-            let error = s.next().unwrap();
-            return match error {
-                "dataset does not exist\n" => {
-                    ZfsError::NoDataset {
-                        dataset: ds.to_owned(),
-                        cmd_info: cmd_info,
-                    }
-                },
-                _ => {
-                    ZfsError::CannotOpen {
-                        cmd_info: cmd_info,
-                    }
-                }
+        let output = cmd.output().map_err(|e| ZfsError::Exec{ io: e})?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr[..]).into_owned();
+
+            let cmd_info = CmdInfo {
+                status: output.status,
+                stderr: stderr,
+                cmd: format!("{:?}", cmd),
             };
+
+            return Err(cmdinfo_to_error(cmd_info))
         }
 
-        // generic error
-        ZfsError::Process {
-            cmd_info: cmd_info,
+        if output.stderr.len() > 0 {
+            warn!("stderr: {}", String::from_utf8_lossy(&output.stderr));
         }
+
+       Ok(output)
     }
 
-    pub fn list_from_builder(&self, builder: &ListBuilder) -> Result<ZfsList, ZfsError>
-    {
+    pub fn list_from_builder(&self, builder: &ListBuilder) -> Result<ZfsList, ZfsError> {
         // zfs list -H
         // '-s <prop>' sort by property (multiple allowed)
         // '-d <depth>' recurse to depth
@@ -339,25 +454,7 @@ impl Zfs {
             }
         }
 
-        eprintln!("run: {:?}", cmd);
-
-        let output = cmd.output().map_err(|e| ZfsError::Exec{ io: e})?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr[..]).into_owned();
-
-            let cmd_info = CmdInfo {
-                status: output.status,
-                stderr: stderr,
-                cmd: format!("{:?}", cmd),
-            };
-
-            return Err(Self::cmdinfo_to_error(cmd_info))
-        }
-
-        if output.stderr.len() > 0 {
-            eprintln!("stderr: {}", String::from_utf8_lossy(&output.stderr));
-        }
+        let output = self.run_output(cmd)?;
 
         Ok(ZfsList { out: output.stdout })
     }
@@ -367,8 +464,32 @@ impl Zfs {
         self.list().query()
     }
 
-    pub fn list(&self) -> ListExecutor {
+    pub fn list(&self) -> ListExecutor<'_> {
         ListExecutor::from_parent(self)
+    }
+
+    /// NOTE: manual documents that if `dataset` is a bookmark, no flags are permitted
+    pub fn destroy(&self, flags: BitFlags<DestroyFlags>, dataset: &str) -> Result<std::process::Output, ZfsError> {
+        let mut cmd = self.cmd();
+        cmd.arg("destroy");
+
+        if !flags.is_empty() {
+            let mut opts = "-".to_owned();
+            for flag in flags.iter() {
+                opts.push(match flag {
+                    DestroyFlags::RecursiveDependents => 'R',
+                    DestroyFlags::ForceUmount => 'f',
+                    DestroyFlags::DryRun => 'n',
+                    DestroyFlags::MachineParsable => 'p',
+                    DestroyFlags::RecursiveChildren => 'r',
+                    DestroyFlags::Verbose => 'v',
+                });
+            }
+
+            cmd.arg(opts);
+        }
+        cmd.arg(dataset);
+        self.run_output(cmd)
     }
 
     // delete
@@ -412,21 +533,36 @@ impl Zfs {
 
         cmd.arg("send");
 
-        let mut opts = "-".to_owned();
+        if !flags.is_empty() {
+            let mut opts = "-".to_owned();
 
-        for flag in flags.iter() {
-            match flag {
-                SendFlags::IncludeProps => { opts.push('P') },
-                SendFlags::EmbedData => { opts.push('e') },
-                SendFlags::Verbose => { opts.push('v') },
-                SendFlags::DryRun => { opts.push('n') },
-                _ => { panic!("unsupported flag: {:?}", flag); }
+            // forbidden flags:
+            //  - `replicate`: `-R`
+            //  - `props`: `-p`
+            //  - `backup`: `-b`
+            //  - `dedup`: `-D`
+            //  - `holds`: `-h`
+            //  - `redactbook`: `-d` `arg`
+
+            for flag in flags.iter() {
+                match flag {
+                    SendFlags::LargeBlock => { opts.push('L') },
+                    SendFlags::EmbedData => { opts.push('e') },
+                    SendFlags::Compressed => { opts.push('c') },
+                    SendFlags::Raw => { opts.push('w') },
+
+                    SendFlags::Verbose => { opts.push('v') },
+                    SendFlags::DryRun => { opts.push('n') },
+                    SendFlags::Parsable => { opts.push('P') },
+                    _ => { panic!("unsupported flag: {:?}", flag); }
+                }
             }
+            cmd.arg(opts);
         }
 
         cmd.arg("-t").arg(receive_resume_token);
 
-        eprintln!("run: {:?}", cmd);
+        info!("run: {:?}", cmd);
 
         Ok(ZfsSend {
             child: cmd
@@ -435,7 +571,16 @@ impl Zfs {
         })
     }
 
-    //pub fn recv_abort_incomplete(&self)
+    pub fn recv_abort_incomplete(&self, dataset: &str) -> Result<(), ZfsError> {
+        let mut cmd = self.cmd();
+
+        cmd.arg("recv")
+            .arg("-A")
+            .arg(dataset);
+
+        self.run_output(cmd)?;
+        Ok(())
+    }
 
     pub fn send(&self, snapname: &str, from: Option<&str>, flags: BitFlags<SendFlags>) -> io::Result<ZfsSend>
     {
@@ -443,34 +588,35 @@ impl Zfs {
 
         cmd.arg("send");
 
-        let mut opts = "-".to_owned();
-
         let mut include_intermediary = false;
-        // realistically, a series of `if flags.contains(*) {*}` statements more susinctly
-        // represents the work needed to be done here. Unfortunately, it isn't clear how to form
-        // that in a way that ensures we have handling for all `SendFlags`.
-        for flag in flags.iter() {
-            match flag {
-                SendFlags::EmbedData => { opts.push('e') },
-                SendFlags::LargeBlock => { opts.push('L') },
-                SendFlags::Compressed => { opts.push('c') },
-                SendFlags::Raw => { opts.push('w') },
+        if !flags.is_empty() {
+            let mut opts = "-".to_owned();
+            // realistically, a series of `if flags.contains(*) {*}` statements more susinctly
+            // represents the work needed to be done here. Unfortunately, it isn't clear how to form
+            // that in a way that ensures we have handling for all `SendFlags`.
+            for flag in flags.iter() {
+                match flag {
+                    SendFlags::EmbedData => { opts.push('e') },
+                    SendFlags::LargeBlock => { opts.push('L') },
+                    SendFlags::Compressed => { opts.push('c') },
+                    SendFlags::Raw => { opts.push('w') },
 
-                SendFlags::Dedup => { opts.push('D') },
+                    SendFlags::Dedup => { opts.push('D') },
 
-                SendFlags::IncludeIntermediary => {
-                    include_intermediary = true
-                },
-                SendFlags::IncludeHolds => { opts.push('h') },
-                SendFlags::IncludeProps => { opts.push('P') },
-                SendFlags::Verbose => { opts.push('v') },
-                SendFlags::DryRun => { opts.push('n') },
-                SendFlags::Parsable => { opts.push('P') },
-                SendFlags::Replicate => { opts.push('R') },
+                    SendFlags::IncludeIntermediary => {
+                        include_intermediary = true
+                    },
+                    SendFlags::IncludeHolds => { opts.push('h') },
+                    SendFlags::IncludeProps => { opts.push('p') },
+                    SendFlags::Verbose => { opts.push('v') },
+                    SendFlags::DryRun => { opts.push('n') },
+                    SendFlags::Parsable => { opts.push('P') },
+                    SendFlags::Replicate => { opts.push('R') },
+                }
             }
-        }
 
-        cmd.arg(opts);
+            cmd.arg(opts);
+        }
 
         match from {
             Some(f) => {
@@ -489,7 +635,7 @@ impl Zfs {
 
         cmd.arg(snapname);
 
-        eprintln!("run: {:?}", cmd);
+        info!("run: {:?}", cmd);
 
         Ok(ZfsSend {
             child: cmd
@@ -505,38 +651,40 @@ impl Zfs {
     // boolean), `lzc_receive_with_reader()` then exposes an additional `resumable` boolean (but
     // also provides a mechanism to pass in a `dmu_replay_record_t` which was read from the `fd`
     // prior to function invocation).
-    pub fn recv(&self, snapname: &str, set_props: Vec<(String,String)>, origin: Option<&str>,
-        
-        exclude_props: Vec<String>, flags: BitFlags<RecvFlags>) ->
+    pub fn recv(&self, snapname: &str, set_props: &[(&str, &str)], origin: Option<&str>,
+        exclude_props: &[&str], flags: BitFlags<RecvFlags>) ->
         io::Result<ZfsRecv>
     {
         let mut cmd = self.cmd();
 
         cmd.arg("recv");
 
-        let mut opts = "-".to_owned();
+        if !flags.is_empty() {
+            let mut opts = "-".to_owned();
 
-        for flag in flags.iter() {
-            match flag {
-                RecvFlags::Force => opts.push('F'),
-                RecvFlags::Resumeable => opts.push('s'),
+            for flag in flags.iter() {
+                match flag {
+                    RecvFlags::Force => opts.push('F'),
+                    RecvFlags::Resumeable => opts.push('s'),
 
-                RecvFlags::DiscardFirstName => opts.push('d'),
-                RecvFlags::DiscardAllButLastName => opts.push('e'),
-                RecvFlags::IgnoreHolds => opts.push('h'),
-                RecvFlags::DryRun => opts.push('n'),
-                RecvFlags::NoMount => opts.push('u'),
-                RecvFlags::Verbose => opts.push('v'),
+                    RecvFlags::DiscardFirstName => opts.push('d'),
+                    RecvFlags::DiscardAllButLastName => opts.push('e'),
+                    RecvFlags::IgnoreHolds => opts.push('h'),
+                    RecvFlags::DryRun => opts.push('n'),
+                    RecvFlags::NoMount => opts.push('u'),
+                    RecvFlags::Verbose => opts.push('v'),
+                }
             }
+
+            cmd
+                .arg(opts);
         }
 
-        cmd
-            .arg(opts);
-
         for set_prop in set_props.into_iter() {
-            let mut s = set_prop.0;
+            let mut s = String::new();
+            s.push_str(set_prop.0.as_ref());
             s.push('=');
-            s.push_str(&set_prop.1[..]);
+            s.push_str(set_prop.1.as_ref());
             cmd.arg("-o").arg(s);
         }
 
@@ -550,7 +698,7 @@ impl Zfs {
         }
 
         cmd.arg(snapname);
-        eprintln!("run: {:?}", cmd);
+        info!("run: {:?}", cmd);
 
         Ok(ZfsRecv {
             child: cmd
@@ -572,6 +720,8 @@ pub struct ZfsRecv {
 
 pub fn send_recv(mut send: ZfsSend, mut recv: ZfsRecv) -> io::Result<u64>
 {
+    // XXX: It woudl be _really_ nice to be able to consume stderr from both send & recv into our
+    // own data to examine. right now we have to guess about the error cause.
     let bytes = std::io::copy(send.child.stdout.as_mut().unwrap(), recv.child.stdin.as_mut().unwrap())?;
 
     // discard the stdin/stdout we left open
@@ -590,7 +740,7 @@ pub fn send_recv(mut send: ZfsSend, mut recv: ZfsRecv) -> io::Result<u64>
     Ok(bytes)
 }
 
-#[derive(EnumFlags,Copy,Clone,Debug,PartialEq,Eq)]
+#[derive(BitFlags,Copy,Clone,Debug,PartialEq,Eq)]
 pub enum RecvFlags {
     // correspond to `lzc` booleans/functions
     /// -F
@@ -629,7 +779,7 @@ pub enum RecvFlags {
 }
 
 
-#[derive(EnumFlags,Copy,Clone,Debug,PartialEq,Eq)]
+#[derive(BitFlags,Copy,Clone,Debug,PartialEq,Eq)]
 pub enum SendFlags {
     // correspond to lzc SendFlags
     /// -e
@@ -660,6 +810,15 @@ pub enum SendFlags {
     Replicate = 1<<11,
 }
 
+#[derive(BitFlags,Copy,Clone,Debug,PartialEq,Eq)]
+pub enum DestroyFlags {
+    RecursiveDependents = 1 << 0,
+    ForceUmount = 1 << 1,
+    DryRun = 1 << 2,
+    MachineParsable = 1 << 3,
+    RecursiveChildren = 1 << 4,
+    Verbose = 1 << 5,
+}
 
 // 
 // send -t <token>

@@ -71,6 +71,10 @@ done
 "$ZOOP" zcopy -vn "$SRC_DS" "$DST_DS"
 "$ZOOP" zcopy -v "$SRC_DS" "$DST_DS"
 
+for i in $(seq 1 5); do
+	ok1 "snap $i send|recv?" zfs list "$DST_DS@$i"
+done
+
 for i in $(seq 25 30); do
 	touch "$SRC_PATH/$i"
 	zfs snapshot "$SRC_DS@$i"
