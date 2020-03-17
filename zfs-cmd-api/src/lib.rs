@@ -10,7 +10,6 @@ extern crate shell_words;
 
 use enumflags2::BitFlags;
 use std::ops::{Deref,DerefMut};
-use std::path::{Path,PathBuf};
 use std::env;
 use std::ffi::OsStr;
 use std::process;
@@ -38,7 +37,6 @@ pub struct CmdInfo {
     stderr: String,
     cmd: String,
 }
-
 
 #[derive(Debug,Fail)]
 pub enum ZfsError {
