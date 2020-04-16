@@ -32,7 +32,6 @@ pub struct CmdInfo {
     cmd: String,
 }
 
-
 #[derive(Debug,Fail)]
 pub enum ZfsError {
     #[fail(display = "execution of zfs command failed: {}", io)]
