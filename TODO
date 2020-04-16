@@ -1,0 +1,6 @@
+ - right now, performance is _poor_ when many filesystems to be backed up exist
+   - a few commands are executed per-filesystem on both src & dst
+ - sometimes snapshots are deleted after zoop enumerates them but before it
+   transfers them. right now this results in a crash. we really should just
+   skip the failure and move onto the next. We need to identify that the cause of
+   failure is that the snapshot didn't exist, though.

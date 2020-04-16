@@ -16,7 +16,7 @@
 //  guid
 //  (and everything else)
 
-use log::{info, trace, error};
+use log::{info, trace, error, debug};
 use enumflags2::BitFlags;
 use zfs_cmd_api::{Zfs, ZfsError, ZfsList};
 
@@ -323,7 +323,7 @@ pub fn zcopy_one(src_zfs: &Zfs, dest_zfs: &Zfs, opts: &ZcopyOpts,
                 if res == "-" {
                     // nada
                     if opts.verbose {
-                        eprintln!("No recv resume, skip to normal transfer");
+                        debug!("No recv resume, skip to normal transfer");
                     }
                 } else {
 
