@@ -33,6 +33,16 @@ Manage zfs snapshot transfer
  - [ZnapZend](https://www.znapzend.org/)
  - [zfsnap](https://www.zfsnap.org/)
  - [pyznap](https://github.com/yboetz/pyznap)
+ - [zrepl](https://zrepl.github.io/)
+   - language: go
+   - snapshotting + replication
+   - tls or ssh transport
+   - runs as a daemon
+   - provides a "status" interface
+   - pull or push configurations
+   - does not support raw/encrypted sends
+   - does not support send resume
+   - uses bookmark per filesystem to track lask sync position
 
 # Various references related to zfs bookmarks & send
 
