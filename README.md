@@ -3,6 +3,22 @@
 Manage zfs snapshot transfer
 
 
+## plans
+
+ - to select snapshots to replicate, provide a regex or similar matching mechanism
+ - significant buffering is required for send/recv, as is overlapping send/recv
+   - send/recv tends to have zero network utilization initially as it examines
+     disks to determine what whill be sent
+   - take advantage of this by ensuring we have N send/recvs running simultaniously when possible
+   - start N `send`s before a `recv` is possible (ie: when recving a previous
+     incrimental) to ensure we can always utilize the network completely.
+ - snapshot cleanup
+   - use timeline buckets
+   - use avaliable space in destination
+   - use known to be transfered
+ - avoiding "no longer exists" issues
+   - manage deletes from the replication process
+
 
 # zfs snapshot & sync managment tools
 
