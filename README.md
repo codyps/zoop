@@ -18,6 +18,15 @@ Manage zfs snapshot transfer
    - use known to be transfered
  - avoiding "no longer exists" issues
    - manage deletes from the replication process
+ - `zfs recv` into mounted fs
+   - must be supported
+   - being able to examine read-only snapshots important feature of backup
+     system (especially when limited local snapshots are maintained)
+   - desirable not to automatically mount on destiation to allow `zfs allow`
+     provided permissions to be sufficient for recv.
+     - unclear how recv with mounting disabled interacts with existing mounted filesystems
+     - may not allow recving that affects mount points (ie: removes them)
+ - consider the case of a filesystem being deleted
 
 
 # zfs snapshot & sync managment tools
