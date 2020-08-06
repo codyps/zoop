@@ -1,0 +1,31 @@
+
+ - zfs recv
+   - `-o canmount=noauto`
+      - disable automounting recved datasets to allow recving without mount privs
+   - `-x mountpoint`
+      - when a manual mount occurs, always show up within the inherited path
+	from dataset created to hold all backups. avoids mounting backups
+	causing mounts to go to weird places
+   - `-x overlay`
+      - allow mounting over already mounted parts (when set by parent)
+   - `-o readonly=on`
+      - when mounting, disable writing
+      - XXX: consider interaction with multiple mounts. Might prevent directory
+	creation preventing mounts.
+   - `-x sharesmb`
+   - `-x sharenfs`
+   - `-F`
+   - `-h`
+     - recv holds? unclear why we'd need to backup holds
+   - `-s`
+     - save partial recv
+   - `-u`
+     - file system that is associated with the received stream is not mounted
+
+   - consider:
+     - `-x compression`
+       - always compress recv'd data
+       - but should we just allow compression from clients to persist?
+
+
+
