@@ -10,7 +10,7 @@ documentation = "https://docs.rs/zoop"
 edition = "2018"
 
 [dependencies]
-clap = "2.33.0"
+clap = "2.33.3"
 zfs-cmd-api = { path = "zfs-cmd-api", version = "0.2.0" }
 fmt-extra = "0.2.1"
 enumflags2 = "0.6.2"
