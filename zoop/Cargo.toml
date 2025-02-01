@@ -4,8 +4,8 @@ version = "0.1.1-dev"
 authors = ["Cody P Schafer <dev@codyps.com>"]
 description = "zfs sync application"
 license = "AGPL-3.0-or-later"
-homepage = "https://github.com/jmesmon/zoop"
-repository = "https://github.com/jmesmon/zoop"
+homepage = "https://github.com/codyps/zoop"
+repository = "https://github.com/codyps/zoop"
 documentation = "https://docs.rs/zoop"
 edition = "2018"
 
