@@ -1,0 +1,17 @@
+[package]
+name = "zoop"
+version = "0.1.1-dev"
+authors = ["Cody P Schafer <dev@codyps.com>"]
+description = "zfs sync application"
+license = "AGPL-3.0-or-later"
+homepage = "https://github.com/jmesmon/zoop"
+repository = "https://github.com/jmesmon/zoop"
+documentation = "https://docs.rs/zoop"
+edition = "2018"
+
+[dependencies]
+clap = "2.33.0"
+fmt-extra = "0.2.1"
+enumflags2 = "0.6.2"
+env_logger = "0.7.1"
+log = "0.4.25"

@@ -1,0 +1,12 @@
+[package]
+name = "zpool-device-locate"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+color-eyre = "0.6.3"
+eyre = "0.6.12"
+tokio = { version = "1.43.0", features = ["rt-multi-thread", "rt"] }
+tokio-macros = "2.5.0"
+tracing-subscriber = "0.3.19"
+zfs-cmd-api = { version = "0.2.0", path = "../zfs-cmd-api" }

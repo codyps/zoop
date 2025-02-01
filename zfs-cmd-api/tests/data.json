@@ -1,0 +1,2977 @@
+{
+  "output_version": {
+    "command": "zpool list",
+    "vers_major": 0,
+    "vers_minor": 1
+  },
+  "pools": {
+    "mainrust": {
+      "name": "mainrust",
+      "type": "POOL",
+      "state": "ONLINE",
+      "pool_guid": "13666012711349147706",
+      "txg": "45178096",
+      "spa_version": "5000",
+      "zpl_version": "5",
+      "properties": {
+        "size": {
+          "value": "1.75T",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "allocated": {
+          "value": "601G",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "free": {
+          "value": "1.16T",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "checkpoint": {
+          "value": "-",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "expandsize": {
+          "value": "-",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "fragmentation": {
+          "value": "20%",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "capacity": {
+          "value": "33%",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "dedupratio": {
+          "value": "1.00x",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "health": {
+          "value": "ONLINE",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "altroot": {
+          "value": "-",
+          "source": {
+            "type": "DEFAULT",
+            "data": "-"
+          }
+        }
+      },
+      "vdevs": {
+        "mirror-0": {
+          "name": "mirror-0",
+          "vdev_type": "mirror",
+          "guid": "15289479982256741534",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "1.75T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "601G",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "1.16T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "20%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "33.6%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "nvme-eui.000000000000000100a0752340ea6c2b-part3": {
+              "name": "nvme-eui.000000000000000100a0752340ea6c2b-part3",
+              "vdev_type": "disk",
+              "guid": "1795761671678904217",
+              "path": "/dev/disk/by-id/nvme-eui.000000000000000100a0752340ea6c2b-part3",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "1.75T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "nvme-eui.000000000000000100a0752340ea6c35-part3": {
+              "name": "nvme-eui.000000000000000100a0752340ea6c35-part3",
+              "vdev_type": "disk",
+              "guid": "4502633991321232497",
+              "path": "/dev/disk/by-id/nvme-eui.000000000000000100a0752340ea6c35-part3",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "1.75T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tank": {
+      "name": "tank",
+      "type": "POOL",
+      "state": "ONLINE",
+      "pool_guid": "17643633366051522574",
+      "txg": "422126106",
+      "spa_version": "5000",
+      "zpl_version": "5",
+      "properties": {
+        "size": {
+          "value": "111T",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "allocated": {
+          "value": "104T",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "free": {
+          "value": "6.67T",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "checkpoint": {
+          "value": "-",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "expandsize": {
+          "value": "-",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "fragmentation": {
+          "value": "55%",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "capacity": {
+          "value": "93%",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "dedupratio": {
+          "value": "1.02x",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "health": {
+          "value": "ONLINE",
+          "source": {
+            "type": "NONE",
+            "data": "-"
+          }
+        },
+        "altroot": {
+          "value": "-",
+          "source": {
+            "type": "DEFAULT",
+            "data": "-"
+          }
+        }
+      },
+      "vdevs": {
+        "mirror-0": {
+          "name": "mirror-0",
+          "vdev_type": "mirror",
+          "guid": "2801673922231546480",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "12.7T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "7.23T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "5.49T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "33%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "56.8%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "dm-uuid-CRYPT-LUKS1-3fc04e0d251b4cec817212c603c58284-z14.2": {
+              "name": "dm-uuid-CRYPT-LUKS1-3fc04e0d251b4cec817212c603c58284-z14.2",
+              "vdev_type": "disk",
+              "guid": "5726555326662251302",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-3fc04e0d251b4cec817212c603c58284-z14.2",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "12.7T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "dm-uuid-CRYPT-LUKS1-e5b69a87e02c4b14be586109488e172a-z14.3": {
+              "name": "dm-uuid-CRYPT-LUKS1-e5b69a87e02c4b14be586109488e172a-z14.3",
+              "vdev_type": "disk",
+              "guid": "12455595712717946389",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-e5b69a87e02c4b14be586109488e172a-z14.3",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "12.7T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mirror-1": {
+          "name": "mirror-1",
+          "vdev_type": "mirror",
+          "guid": "15581715015551336503",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "7.27T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "7.19T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "74.4G",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "59%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "99.0%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "dm-uuid-CRYPT-LUKS1-b0d4731323ee47cba452ba4a65899afe-z8.5": {
+              "name": "dm-uuid-CRYPT-LUKS1-b0d4731323ee47cba452ba4a65899afe-z8.5",
+              "vdev_type": "disk",
+              "guid": "7035198730005854437",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-b0d4731323ee47cba452ba4a65899afe-z8.5",
+              "devid": "dm-uuid-CRYPT-LUKS1-b0d4731323ee47cba452ba4a65899afe-d8.2",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "7.28T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "dm-uuid-CRYPT-LUKS1-b1981692b6d248658979dc934a772f50-z8.4": {
+              "name": "dm-uuid-CRYPT-LUKS1-b1981692b6d248658979dc934a772f50-z8.4",
+              "vdev_type": "disk",
+              "guid": "516353021259712754",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-b1981692b6d248658979dc934a772f50-z8.4",
+              "devid": "dm-uuid-CRYPT-LUKS1-b1981692b6d248658979dc934a772f50-d8.3",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "7.28T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mirror-2": {
+          "name": "mirror-2",
+          "vdev_type": "mirror",
+          "guid": "4796807142241909275",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "12.7T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "12.4T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "316G",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "41%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "97.6%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "dm-uuid-CRYPT-LUKS1-4aea7cc3224f4ad983f4d687103ad35e-z14.1": {
+              "name": "dm-uuid-CRYPT-LUKS1-4aea7cc3224f4ad983f4d687103ad35e-z14.1",
+              "vdev_type": "disk",
+              "guid": "12602221897599481938",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-4aea7cc3224f4ad983f4d687103ad35e-z14.1",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "12.7T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "dm-uuid-CRYPT-LUKS1-327b64abb1c044949b5b3a6007e9afcc-z14.0": {
+              "name": "dm-uuid-CRYPT-LUKS1-327b64abb1c044949b5b3a6007e9afcc-z14.0",
+              "vdev_type": "disk",
+              "guid": "4100891465398702400",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-327b64abb1c044949b5b3a6007e9afcc-z14.0",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "12.7T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mirror-3": {
+          "name": "mirror-3",
+          "vdev_type": "mirror",
+          "guid": "5898261406907484203",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "7.27T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "7.10T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "167G",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "42%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "97.8%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "dm-uuid-CRYPT-LUKS2-71bd51ee91124707b5e06a2be2e83d0a-z12.8": {
+              "name": "dm-uuid-CRYPT-LUKS2-71bd51ee91124707b5e06a2be2e83d0a-z12.8",
+              "vdev_type": "disk",
+              "guid": "17322213120823058356",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS2-71bd51ee91124707b5e06a2be2e83d0a-z12.8",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "10.9T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "replacing-1": {
+              "name": "replacing-1",
+              "vdev_type": "replacing",
+              "guid": "10783100625201880900",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              },
+              "vdevs": {
+                "dm-name-z8.2": {
+                  "name": "dm-name-z8.2",
+                  "vdev_type": "disk",
+                  "guid": "7505559382419031062",
+                  "path": "/dev/disk/by-id/dm-name-z8.2",
+                  "devid": "dm-uuid-CRYPT-LUKS1-d353aef34afa4f8a9f604c233dd3feae-z8.2",
+                  "class": "normal",
+                  "state": "ONLINE",
+                  "properties": {
+                    "size": {
+                      "value": "7.28T",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "allocated": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "free": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "checkpoint": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "expandsize": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "fragmentation": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "capacity": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "dedupratio": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "health": {
+                      "value": "ONLINE",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    }
+                  }
+                },
+                "i01": {
+                  "name": "i01",
+                  "vdev_type": "disk",
+                  "guid": "3870533176997832083",
+                  "path": "/dev/mapper/i01",
+                  "class": "normal",
+                  "state": "ONLINE",
+                  "properties": {
+                    "size": {
+                      "value": "16.4T",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "allocated": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "free": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "checkpoint": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "expandsize": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "fragmentation": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "capacity": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "dedupratio": {
+                      "value": "-",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    },
+                    "health": {
+                      "value": "ONLINE",
+                      "source": {
+                        "type": "NONE",
+                        "data": "-"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mirror-4": {
+          "name": "mirror-4",
+          "vdev_type": "mirror",
+          "guid": "16229305079822685651",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "9.06T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "8.98T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "87.0G",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "66%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "99.1%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "dm-uuid-CRYPT-LUKS1-f5cc909895b94592870402de317ff4a8-z10.2": {
+              "name": "dm-uuid-CRYPT-LUKS1-f5cc909895b94592870402de317ff4a8-z10.2",
+              "vdev_type": "disk",
+              "guid": "16663140545990328976",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-f5cc909895b94592870402de317ff4a8-z10.2",
+              "devid": "dm-uuid-CRYPT-LUKS1-f5cc909895b94592870402de317ff4a8-d10.0",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "9.10T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "dm-uuid-CRYPT-LUKS1-999355cf19c443beaff84ba5b30f82c7-z10.3": {
+              "name": "dm-uuid-CRYPT-LUKS1-999355cf19c443beaff84ba5b30f82c7-z10.3",
+              "vdev_type": "disk",
+              "guid": "16893451224641453851",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-999355cf19c443beaff84ba5b30f82c7-z10.3",
+              "devid": "dm-uuid-CRYPT-LUKS1-999355cf19c443beaff84ba5b30f82c7-d10.1",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "9.10T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mirror-5": {
+          "name": "mirror-5",
+          "vdev_type": "mirror",
+          "guid": "4319439574465811368",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "9.09T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "9.00T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "93.1G",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "62%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "99.0%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "dm-uuid-CRYPT-LUKS1-a2c194b0e0cb45da88e2b363ade7f274-z10.4": {
+              "name": "dm-uuid-CRYPT-LUKS1-a2c194b0e0cb45da88e2b363ade7f274-z10.4",
+              "vdev_type": "disk",
+              "guid": "4473711824735588132",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-a2c194b0e0cb45da88e2b363ade7f274-z10.4",
+              "devid": "dm-uuid-CRYPT-LUKS1-a2c194b0e0cb45da88e2b363ade7f274-d10.2",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "9.10T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "dm-uuid-CRYPT-LUKS1-daba9c630d4a41a79dd416eb50357bea-z10.6": {
+              "name": "dm-uuid-CRYPT-LUKS1-daba9c630d4a41a79dd416eb50357bea-z10.6",
+              "vdev_type": "disk",
+              "guid": "11559068356103030222",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-daba9c630d4a41a79dd416eb50357bea-z10.6",
+              "devid": "dm-uuid-CRYPT-LUKS1-daba9c630d4a41a79dd416eb50357bea-d10.3",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "9.10T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mirror-6": {
+          "name": "mirror-6",
+          "vdev_type": "mirror",
+          "guid": "2479621637901868764",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "9.09T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "9.00T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "93.1G",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "62%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "99.0%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "dm-uuid-CRYPT-LUKS1-531546f7f1104507bf8756c7323a4be8-z10.5": {
+              "name": "dm-uuid-CRYPT-LUKS1-531546f7f1104507bf8756c7323a4be8-z10.5",
+              "vdev_type": "disk",
+              "guid": "6722608118199084570",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-531546f7f1104507bf8756c7323a4be8-z10.5",
+              "devid": "dm-uuid-CRYPT-LUKS1-531546f7f1104507bf8756c7323a4be8-d10.4",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "9.10T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "dm-uuid-CRYPT-LUKS1-0ba5ea88895d416cae69a011852c1afd-z10.1": {
+              "name": "dm-uuid-CRYPT-LUKS1-0ba5ea88895d416cae69a011852c1afd-z10.1",
+              "vdev_type": "disk",
+              "guid": "12670541344625969211",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS1-0ba5ea88895d416cae69a011852c1afd-z10.1",
+              "devid": "dm-uuid-CRYPT-LUKS1-0ba5ea88895d416cae69a011852c1afd-d10.5",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "9.10T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mirror-7": {
+          "name": "mirror-7",
+          "vdev_type": "mirror",
+          "guid": "2296358563542467893",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "10.9T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "10.8T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "71.8G",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "66%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "99.3%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "dm-uuid-CRYPT-LUKS2-bb711a67822b4a508e522664de603c12-z12.0": {
+              "name": "dm-uuid-CRYPT-LUKS2-bb711a67822b4a508e522664de603c12-z12.0",
+              "vdev_type": "disk",
+              "guid": "6283371758920790449",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS2-bb711a67822b4a508e522664de603c12-z12.0",
+              "devid": "dm-uuid-CRYPT-LUKS2-bb711a67822b4a508e522664de603c12-z12.0",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "10.9T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "dm-uuid-CRYPT-LUKS2-9aadb9076c4a469bb795f15ae210a421-z12.2": {
+              "name": "dm-uuid-CRYPT-LUKS2-9aadb9076c4a469bb795f15ae210a421-z12.2",
+              "vdev_type": "disk",
+              "guid": "4263933087880235999",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS2-9aadb9076c4a469bb795f15ae210a421-z12.2",
+              "devid": "dm-uuid-CRYPT-LUKS2-9aadb9076c4a469bb795f15ae210a421-z12.2",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "10.9T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mirror-8": {
+          "name": "mirror-8",
+          "vdev_type": "mirror",
+          "guid": "5328519653678850623",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "10.9T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "10.8T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "84.8G",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "63%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "99.2%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "dm-uuid-CRYPT-LUKS2-5f80c3664ef84441b924042630b8b5e2-z12.1": {
+              "name": "dm-uuid-CRYPT-LUKS2-5f80c3664ef84441b924042630b8b5e2-z12.1",
+              "vdev_type": "disk",
+              "guid": "7274434324538727781",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS2-5f80c3664ef84441b924042630b8b5e2-z12.1",
+              "devid": "dm-uuid-CRYPT-LUKS2-5f80c3664ef84441b924042630b8b5e2-z12.1",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "10.9T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "dm-uuid-CRYPT-LUKS2-43faab20d5ee4a0d9bc806515ccd67ad-z12.3": {
+              "name": "dm-uuid-CRYPT-LUKS2-43faab20d5ee4a0d9bc806515ccd67ad-z12.3",
+              "vdev_type": "disk",
+              "guid": "13649946414862804989",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS2-43faab20d5ee4a0d9bc806515ccd67ad-z12.3",
+              "devid": "dm-uuid-CRYPT-LUKS2-43faab20d5ee4a0d9bc806515ccd67ad-z12.3",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "10.9T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mirror-9": {
+          "name": "mirror-9",
+          "vdev_type": "mirror",
+          "guid": "11144534952233533298",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "10.9T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "10.8T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "112G",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "64%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "99.0%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "dm-uuid-CRYPT-LUKS2-7328ac33263b4b35addda5a1934f1cea-z12.5": {
+              "name": "dm-uuid-CRYPT-LUKS2-7328ac33263b4b35addda5a1934f1cea-z12.5",
+              "vdev_type": "disk",
+              "guid": "13495647563734244283",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS2-7328ac33263b4b35addda5a1934f1cea-z12.5",
+              "devid": "dm-uuid-CRYPT-LUKS2-7328ac33263b4b35addda5a1934f1cea-z12.5",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "10.9T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "dm-uuid-CRYPT-LUKS2-329d228eec274842b0aba3e029044aba-z12.6": {
+              "name": "dm-uuid-CRYPT-LUKS2-329d228eec274842b0aba3e029044aba-z12.6",
+              "vdev_type": "disk",
+              "guid": "8601802118682992312",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS2-329d228eec274842b0aba3e029044aba-z12.6",
+              "devid": "dm-uuid-CRYPT-LUKS2-329d228eec274842b0aba3e029044aba-z12.6",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "10.9T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "mirror-10": {
+          "name": "mirror-10",
+          "vdev_type": "mirror",
+          "guid": "5574456015292304252",
+          "class": "normal",
+          "state": "ONLINE",
+          "properties": {
+            "size": {
+              "value": "10.9T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "allocated": {
+              "value": "10.8T",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "free": {
+              "value": "112G",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "checkpoint": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "expandsize": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "fragmentation": {
+              "value": "61%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "capacity": {
+              "value": "99.0%",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "dedupratio": {
+              "value": "-",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            },
+            "health": {
+              "value": "ONLINE",
+              "source": {
+                "type": "NONE",
+                "data": "-"
+              }
+            }
+          },
+          "vdevs": {
+            "dm-uuid-CRYPT-LUKS2-03bd7fae79fb4f719fae4ee95b39aa77-z12.4": {
+              "name": "dm-uuid-CRYPT-LUKS2-03bd7fae79fb4f719fae4ee95b39aa77-z12.4",
+              "vdev_type": "disk",
+              "guid": "11633448460096827575",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS2-03bd7fae79fb4f719fae4ee95b39aa77-z12.4",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "10.9T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            },
+            "dm-uuid-CRYPT-LUKS2-8038c355bc654cb1a823622f11d6a828-z12.7": {
+              "name": "dm-uuid-CRYPT-LUKS2-8038c355bc654cb1a823622f11d6a828-z12.7",
+              "vdev_type": "disk",
+              "guid": "16104453434150649249",
+              "path": "/dev/disk/by-id/dm-uuid-CRYPT-LUKS2-8038c355bc654cb1a823622f11d6a828-z12.7",
+              "class": "normal",
+              "state": "ONLINE",
+              "properties": {
+                "size": {
+                  "value": "10.9T",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "allocated": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "free": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "checkpoint": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "expandsize": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "fragmentation": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "capacity": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "dedupratio": {
+                  "value": "-",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                },
+                "health": {
+                  "value": "ONLINE",
+                  "source": {
+                    "type": "NONE",
+                    "data": "-"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

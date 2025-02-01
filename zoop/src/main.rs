@@ -7,41 +7,40 @@ extern crate clap;
 extern crate zfs_cmd_api;
 extern crate zoop;
 
-use zoop::*;
-use zfs_cmd_api::Zfs;
-use clap::{Arg,SubCommand,AppSettings};
+use clap::Parser;
+use clap::{AppSettings, Arg, SubCommand};
 use std::io::Write;
-use structopt::StructOpt;
+use zfs_cmd_api::Zfs;
+use zoop::*;
 
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 struct Opts {
     /// Do not execute anything which would change system state. Print what state would be changed
-    #[structopt(short = "n")]
+    #[clap(short = "n")]
     dry_run: bool,
 
     /// emit extra info
-    #[structopt(short = "v")]
+    #[clap(short = "v")]
     verbose: bool,
 
-
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     subcommand: Command,
 }
 
-#[derive(Debug, StructOpt)]
-struct Command {
+#[derive(Debug, Parser)]
+enum Command {
     /// replicate an entire set of snapshots from one tree to another
     Zcopy(ZcopyOpts),
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 struct ZcopyOpts {
     /// Also examine datasets that decend from the specified dataset
-    #[structopt(short = "r")]
+    #[clap(short = "r")]
     recusive: bool,
 
     /// Do not enable resumable send/recv when receiving
-    #[structopt(short = "Y")]
+    #[clap(short = "Y")]
     not_resumable: bool,
 
     src_dataset: PathBuf,
@@ -52,8 +51,7 @@ struct ZcopyOpts {
 #[allow(dead_code)]
 const CARGO_TOML: &'static str = include_str!("../Cargo.toml");
 
-fn level_to_msg_prefix(level: log::Level) -> &'static str
-{
+fn level_to_msg_prefix(level: log::Level) -> &'static str {
     use log::Level;
     match level {
         Level::Error => "<3>",
@@ -66,9 +64,7 @@ fn level_to_msg_prefix(level: log::Level) -> &'static str
 
 fn main() {
     env_logger::builder()
-        .format(|w, rec| {
-            writeln!(w, "{}{}", level_to_msg_prefix(rec.level()), rec.args())
-        })
+        .format(|w, rec| writeln!(w, "{}{}", level_to_msg_prefix(rec.level()), rec.args()))
         .init();
 
     let matches = app_from_crate!()
@@ -133,7 +129,6 @@ fn main() {
         // subcommand(SubCommand::with_name("snap-cleanup")
             ).get_matches();
 
-
     let dry_run = matches.occurrences_of("dry-run") > 0;
     let verbose = matches.occurrences_of("verbose") > 0;
     let not_resumable = matches.occurrences_of("not-resumable") > 0;
@@ -154,8 +149,10 @@ fn main() {
         let src_zfs = Zfs::from_env_prefix("SRC");
         let dest_zfs = Zfs::from_env_prefix("DEST");
 
-
-        println!("copy from {} to {} (recursive={})", src_dataset, dest_dataset, recursive);
+        println!(
+            "copy from {} to {} (recursive={})",
+            src_dataset, dest_dataset, recursive
+        );
         println!("dry_run: {}", dry_run);
 
         if recursive {
