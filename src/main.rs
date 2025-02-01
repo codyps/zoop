@@ -11,6 +11,42 @@ use zoop::*;
 use zfs_cmd_api::Zfs;
 use clap::{Arg,SubCommand,AppSettings};
 use std::io::Write;
+use structopt::StructOpt;
+
+#[derive(StructOpt, Debug)]
+struct Opts {
+    /// Do not execute anything which would change system state. Print what state would be changed
+    #[structopt(short = "n")]
+    dry_run: bool,
+
+    /// emit extra info
+    #[structopt(short = "v")]
+    verbose: bool,
+
+
+    #[structopt(subcommand)]
+    subcommand: Command,
+}
+
+#[derive(Debug, StructOpt)]
+struct Command {
+    /// replicate an entire set of snapshots from one tree to another
+    Zcopy(ZcopyOpts),
+}
+
+#[derive(Debug, StructOpt)]
+struct ZcopyOpts {
+    /// Also examine datasets that decend from the specified dataset
+    #[structopt(short = "r")]
+    recusive: bool,
+
+    /// Do not enable resumable send/recv when receiving
+    #[structopt(short = "Y")]
+    not_resumable: bool,
+
+    src_dataset: PathBuf,
+    dest_dataset: PathBuf,
+}
 
 // hack to try to get `app_from_crate!()` to regenerate.
 #[allow(dead_code)]
